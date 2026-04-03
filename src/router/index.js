@@ -9,6 +9,7 @@ import epi from '/./views/epi.vue'
 import dashboard from '/./views/dashboard.vue'
 import fornecedor from '/./views/fornecedor.vue'
 import setor from '/./views/setor.vue'
+import helloworld from './components/helloworld.vue'
 const routes = [
 { path: '/', component: home },
 { path: '/login', component: login },
@@ -19,7 +20,9 @@ const routes = [
 { path: '/epi', component: epi },
 { path: '/dashboard', component: dashboard },
 { path: '/fornecedor', component: fornecedor },
-{ path: '/setor', component: setor }
+{ path: '/setor', component: setor },
+{ path: '/helloworld', component: helloworld }
+
 ]
 const router = createRouter({
 history: createWebHistory(),
