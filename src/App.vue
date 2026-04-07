@@ -1,7 +1,7 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import heroImg from '@/assets/hero.png'
 </script>
 
 <template>
-  <HelloWorld />
+  <img :src="heroImg" alt="Trabalhador com EPI" class="home__hero-img" />
 </template>
