@@ -1,14 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import home from '../views/home.vue'
-import login from '/./views/login.vue'
+import login from '../views/login.vue'
 import funcionario from '../views/funcionario.vue'
-import estoque from '/./views/estoque.vue'
-import entrega from '/./views/entrega.vue'
-import cadastro from '/./views/cadastro.vue'
-import epi from '/./views/epi.vue'
-import dashboard from '/./views/dashboard.vue'
-import fornecedor from '/./views/fornecedor.vue'
-import setor from '/./views/setor.vue'
+import estoque from '../views/estoque.vue'
+import entrega from '../views/entrega.vue'
+import cadastro from '../views/cadastro.vue'
+import epi from '../views/epi.vue'
+import dashboard from '../views/dashboard.vue'
+import fornecedor from '../views/fornecedor.vue'
+import setor from '../views/setor.vue'
 
 const routes = [
 { path: '/', component: home },

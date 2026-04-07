@@ -19,6 +19,7 @@
 </footer>
 
 </template>
+
 <style scoped>
 .footer {
   display: flex;
