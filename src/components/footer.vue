@@ -1,3 +1,4 @@
+<template>
 <footer class="footer">
     <div class="footer__contato">
         <h4>Contato</h4>
@@ -17,8 +18,15 @@
     </div>
 
 </footer>
-
 </template>
+
+<script>
+export default {
+  name: 'Footer'
+}
+</script>
+
+
 
 <style scoped>
 .footer {

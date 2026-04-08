@@ -3,7 +3,7 @@
 
     <div class="navbar__marca">
         <img  axe-liner (image-alt): Imagens must have alternative text
-        src="../assets/logo.png"
+        src="../assets/vue.svg"
         alt= "Logo EPI"
         class="navbar__logo"
         />
@@ -25,11 +25,19 @@
       </ul>
     </nav>
 
-    <RouterLink to="/login" class="navbar__login"
-    <button type="button" class="navbar__btn">Entrar</button>
+    <RouterLink to="/login" class="navbar__login">
+    <button type="button" class="btn">Entrar</button>
     </RouterLink>
     </header>
 </template>
+
+<script>
+export default {
+  name: 'Menu'
+}
+</script>
+
+
 
 <style scoped>
 .navbar {
@@ -87,7 +95,7 @@
   text-decoration: none;
   flex-shrink: 0;
 }
-.navbar__btn {
+.btn {
   background: #e68507;
   color: #333;
   border: none;
