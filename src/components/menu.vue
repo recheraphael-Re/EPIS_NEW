@@ -3,7 +3,7 @@
 
     <div class="navbar__marca">
         <img  axe-liner (image-alt): Imagens must have alternative text
-        src="../assets/vue.svg"
+        src="../assets/logoEPI.jpg"
         alt= "Logo EPI"
         class="navbar__logo"
         />
@@ -44,7 +44,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #333;
+  background-color: #1E3A5F;
   padding: 10px 20px;
   height: 58px;
   border-bottom: 1px solid #444;
@@ -69,7 +69,7 @@ export default {
   gap: 2px;
 }
 .navbar__link {
-  color: #fff;
+  color: #F97316;
   display: block;
   padding: 6px 12px;
   border-radius: 7px;
@@ -82,7 +82,7 @@ export default {
   
 }
 .navbar__link:hover {
-  background-color: #555;
+  background-color: #be0a0a;
   color: #e6de07;
 }
 .navbar__link.router-link-active {

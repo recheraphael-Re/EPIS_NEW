@@ -9,7 +9,7 @@
       </div>
 
       <div class="home__hero-imagem">
-        <img src="../assets/hero.png" alt="Trabalhador com EPI" class="home__hero-img" />
+        <img src="../assets/logoEPI.jpg" alt="Trabalhador com EPI" class="home__hero-img" />
       </div> 
     </section>
 
@@ -47,26 +47,28 @@
       <div class="home__passos">
         <article class="passo">
           <span class="passo__numero">1</span>
+          <span style='font-size:100px;'>&#128187;</span>
           <h3>Cadastre os colaboradores</h3>
           <p>Acesse o menu Colaboradores e registre cada funcionário com seus dados.</p>
         </article>
 
         <article class="passo">
           <span class="passo__numero">2</span>
+          <span style='font-size:100px;'>&#129405;</span>
           <h3>Cadastre os EPIs</h3>
           <p>Vá em Equipamentos e adicione os EPIs disponíveis com validade e quantidade.</p>
         </article>
 
         <article class="passo">
           <span class="passo__numero">3</span>
-          <span style='font-size:100px;'>&#127875;</span>
+          <span style='font-size:100px;'>&#128221;</span>
           <h3>Registre as entregas</h3>
           <p>Em Entregas, vincule o EPI ao colaborador e registre a data de entrega.</p>
         </article>
 
         <article class="passo">
           <span class="passo__numero">4</span>
-          <span style='font-size:100px;'>&#128110;</span>
+          <span style='font-size:100px;'>&#128196;</span>
           <h3>Acompanhe os relatórios</h3>
           <p>Monitore validades e histórico de entregas pelo menu Relatórios.</p>
         </article>
@@ -80,6 +82,7 @@
 
 <script>
 import Menu from '../components/Menu.vue'
+
 import Footer from '../components/Footer.vue'
 
 export default {
