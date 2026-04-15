@@ -86,7 +86,7 @@ import Menu from '../components/Menu.vue'
 import Footer from '../components/Footer.vue'
 
 export default {
-  name: 'Home',
+  name: 'home',
   components: {
     Menu,
     Footer

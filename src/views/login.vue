@@ -47,31 +47,39 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref } from 'vue'
+import { useSupabase } from '../composables/useSupabase'
+import { useRouter } from 'vue-router'
 
-const email = ref("");
-const senha = ref("");
+const { supabase } = useSupabase()
+const router = useRouter()
 
-function entrar() {
+const email = ref(" ")
+const senha = ref(" ")
+
+async function entrar() {
   if (!email.value || !senha.value) {
-    alert("Preencha todos os campos!");
-    return;
+    alert("Preencha todos os campos!")
+    return
   }
 
-  // Simulação de login
-  if (email.value === "admin@epi.com" && senha.value === "123") {
-    alert("Login realizado com sucesso!");
-    
-    // Aqui você pode redirecionar depois
-    // ex: router.push('/')
-  } else {
-    alert("Email ou senha inválidos!");
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: senha.value,
+  })
+
+  if (error) {
+    alert("Erro: " + error.message)
+    return
   }
+
+  alert("Login realizado com sucesso!")
+
+  router.push('/applayout') //redireciona após login
 }
 </script>
 
 <style scoped>
-/* BASE */
 .login {
   height: 100vh;
   display: flex;
@@ -80,7 +88,6 @@ function entrar() {
   background-color: #1f3a5f;
 }
 
-/* CARD */
 .login__card {
   background: white;
   padding: 2rem;
@@ -90,7 +97,6 @@ function entrar() {
   box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
-/* HEADER */
 .login__header {
   text-align: center;
   margin-bottom: 1.5rem;
@@ -105,7 +111,6 @@ function entrar() {
   font-size: 0.9rem;
 }
 
-/* CAMPOS */
 .form__grupo {
   display: flex;
   flex-direction: column;
@@ -129,7 +134,6 @@ function entrar() {
   border-color: #ff8c00;
 }
 
-/* BOTÃO */
 .btn {
   width: 100%;
   padding: 0.7rem;
