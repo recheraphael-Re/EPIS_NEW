@@ -33,7 +33,7 @@
     <span>Cadastro</span>
   </RouterLink> 
 
-  <RouterLink to="/applayout/epi" class="menu-item" active-class="active">,
+  <RouterLink to="/applayout/epi" class="menu-item" active-class="active">
     <i class="fas fa-hard-hat"></i>
     <span>EPI</span>
   </RouterLink>
@@ -160,7 +160,7 @@ async function sair() {
 .sidebar {
   width: 250px;
   /* Largura fixa de 250px */
-  background-color: #003D99;
+  background-color: #081e40;
   /* Azul escuro como fundo */
   color: #FFFFFF;
   /* Texto branco */

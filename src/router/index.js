@@ -9,7 +9,6 @@ import epi from '../views/epi.vue'
 import dashboard from '../views/dashboard.vue'
 import fornecedor from '../views/fornecedor.vue'
 import setor from '../views/setor.vue'
-import { useSupabase } from '../composables/useSupabase'
 import applayout from '../components/applayout.vue'
 import relatorio from '../views/relatorio.vue'
 
@@ -27,10 +26,10 @@ const routes = [
       { path: 'dashboard', component: dashboard },
       { path: 'entrega', component: entrega },
       { path: 'fornecedor', component: fornecedor },
-      { path: 'funcionario', component: funcionario }
+      { path: 'funcionario', component: funcionario },
       { path: 'cadastro', component: cadastro },
       { path: 'epi', component: epi },
-      { path: 'setor', component: setor}
+      { path: 'setor', component: setor},
       { path: 'relatorio', component: relatorio }
       
 
