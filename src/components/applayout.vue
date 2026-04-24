@@ -28,11 +28,7 @@
     <span>Estoque</span>
   </RouterLink>
 
-  <RouterLink to="/applayout/cadastro" class="menu-item" active-class="active">
-    <i class="fas fa-user-plus"></i>
-    <span>Cadastro</span>
-  </RouterLink> 
-
+  
   <RouterLink to="/applayout/epi" class="menu-item" active-class="active">
     <i class="fas fa-hard-hat"></i>
     <span>EPI</span>

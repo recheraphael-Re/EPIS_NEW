@@ -1,199 +1,256 @@
 <template>
-  <main class="funcionario">
+  <div class="layout-container">
+    
+    <header class="header-section">
+      <h1>Controle de Efetivo</h1>
+      <p>Gerencie o cadastro de colaboradores e organize por setores.</p>
+    </header>
 
-    <!-- HEADER -->
-    <section class="funcionario__header">
-      <div>
-        <h1>Funcionários</h1>
-        <p>Gerencie os colaboradores cadastrados no sistema.</p>
-      </div>
+    <main class="content">
+      <section class="card-form">
+        <div class="card-header">
+          <h3>{{ editandoId ? 'Alterar Registro' : 'Novo Funcionário' }}</h3>
+        </div>
+        
+        <form @submit.prevent="salvar" class="main-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="nome">Nome Completo</label>
+              <input v-model="form.nome" type="text" id="nome" placeholder="Digite o nome completo" required>
+            </div>
+            <div class="form-group">
+              <label for="matricula">Nº Matrícula</label>
+              <input v-model="form.matricula" type="text" id="matricula" placeholder="Ex: sp554" required>
+            </div>
+          </div>
 
-      <button class="btn btn--novo" @click="novoFuncionario">
-        + Novo
-      </button>
-    </section>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="setor">Setor</label>
+              <input v-model="form.setor" type="text" id="setor" placeholder="Ex: Manutenção" required>
+            </div>
+            <div class="form-group">
+              <label for="cargo">Cargo</label>
+              <input v-model="form.cargo" type="text" id="cargo" placeholder="Ex: Pedreiro" required>
+            </div>
+          </div>
+          
+          <div class="action-bar">
+            <button type="submit" class="btn btn-primary">
+              {{ editandoId ? 'Atualizar Dados' : 'Finalizar Cadastro' }}
+            </button>
+            <button v-if="editandoId" type="button" @click="cancelarEdicao" class="btn btn-outline">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </section>
 
-    <!-- BUSCA -->
-    <section class="funcionario__busca">
-      <input
-        type="text"
-        placeholder="Buscar funcionário..."
-        v-model="busca"
-      />
-    </section>
+      <section class="card-table">
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Matrícula</th>
+              <th>Setor / Cargo</th>
+              <th class="text-center">Gerenciar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="f in funcionarios" :key="f.id">
+              <td><span class="text-bold">{{ f.nome }}</span></td>
+              <td>{{ f.matricula }}</td>
+              <td>
+                <span class="badge">{{ f.setor }}</span>
+                <span class="cargo-text">{{ f.cargo }}</span>
+              </td>
+              <td class="text-center">
+                <button @click="prepararEdicao(f)" class="btn-action edit">Editar</button>
+                <button @click="excluir(f.id)" class="btn-action delete">Excluir</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
 
-    <!-- TABELA -->
-    <section class="funcionario__tabela">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Email</th>
-            <th>Cargo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr v-for="(f, index) in funcionariosFiltrados" :key="index">
-            <td>{{ f.nome }}</td>
-            <td>{{ f.email }}</td>
-            <td>{{ f.cargo }}</td>
-            <td>
-              <button class="btn btn--editar" @click="editar(f)">Editar</button>
-              <button class="btn btn--remover" @click="remover(index)">Excluir</button>
-            </td>
-          </tr>
-
-          <tr v-if="funcionariosFiltrados.length === 0">
-            <td colspan="4" class="vazio">
-              Nenhum funcionário encontrado
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-  </main>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, reactive, onMounted } from 'vue';
+import { useSupabase } from '../composables/useSupabase';
 
-const busca = ref("");
+const { supabase } = useSupabase();
 
-const funcionarios = ref([
-  { nome: "João Silva", email: "joao@email.com", cargo: "Operador" },
-  { nome: "Maria Souza", email: "maria@email.com", cargo: "Técnica" },
-  { nome: "Carlos Lima", email: "carlos@email.com", cargo: "Supervisor" }
-]);
 
-const funcionariosFiltrados = computed(() => {
-  return funcionarios.value.filter(f =>
-    f.nome.toLowerCase().includes(busca.value.toLowerCase())
-  );
+// Variáveis que controlam os dados na tela
+const funcionarios = ref([]);
+const editandoId = ref(null);
+const form = reactive({ 
+  nome: '', 
+  matricula: '', 
+  setor: '', 
+  cargo: '' 
 });
 
-function novoFuncionario() {
-  alert("Ir para tela de cadastro");
-}
-
-function editar(funcionario) {
-  alert(`Editar: ${funcionario.nome}`);
-}
-
-function remover(index) {
-  if (confirm("Deseja excluir este funcionário?")) {
-    funcionarios.value.splice(index, 1);
+const carregar = async () => {
+  const { data, error } = await supabase.from('funcionarios').select('*').order('nome');
+  if (error) {
+    console.error("Erro ao carregar:", error.message);
+  } else {
+    funcionarios.value = data || [];
   }
-}
+};
+
+// Salva um novo ou atualiza um existente
+const salvar = async () => {
+  if (editandoId.value) {
+    // Modo de Edição (Update)
+    await supabase.from('funcionarios').update(form).eq('id', editandoId.value);
+  } else {
+    // Modo de Criação (Insert)
+    await supabase.from('funcionarios').insert([form]);
+  }
+  cancelarEdicao();
+  carregar();
+};
+
+// Prepara o formulário para edição ao clicar no botão
+const prepararEdicao = (f) => {
+  editandoId.value = f.id;
+  Object.assign(form, { 
+    nome: f.nome, 
+    matricula: f.matricula, 
+    setor: f.setor, 
+    cargo: f.cargo 
+  });
+};
+
+// Deleta um registro
+const excluir = async (id) => {
+  if (confirm('Deseja realmente remover este registro?')) {
+    await supabase.from('funcionarios').delete().eq('id', id);
+    carregar();
+  }
+};
+
+// Limpa o formulário e sai do modo de edição
+const cancelarEdicao = () => {
+  editandoId.value = null;
+  Object.assign(form, { nome: '', matricula: '', setor: '', cargo: '' });
+};
+
+// Inicia a busca de dados assim que a tela abre
+onMounted(carregar);
 </script>
 
 <style scoped>
-/* BASE */
-.funcionario {
-  padding: 2rem;
-  background-color: #f5f6f8;
+ 
+.layout-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  background-color: #f8fafc;
   min-height: 100vh;
 }
 
-/* HEADER */
-.funcionario__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
+.header-section { margin-bottom: 30px; }
+.header-section h1 { color: #0f172a; font-size: 1.8rem; }
+.header-section p { color: #64748b; }
 
-.funcionario__header h1 {
-  color: #1f3a5f;
-  margin-bottom: 0.3rem;
-}
-
-.funcionario__header p {
-  color: #6c757d;
-}
-
-/* BUSCA */
-.funcionario__busca {
-  margin-bottom: 1rem;
-}
-
-.funcionario__busca input {
-  width: 100%;
-  max-width: 300px;
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.funcionario__busca input:focus {
-  outline: none;
-  border-color: #ff8c00;
-}
-
-/* TABELA */
-.funcionario__tabela {
-  background: white;
-  padding: 1rem;
+/* Cards */
+.card-form, .card-table {
+  background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+  overflow: hidden;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.card-header {
+  background-color: #f8fafc;
+  padding: 15px 24px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-thead {
-  background-color: #1f3a5f;
-  color: white;
+.main-form { padding: 24px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
-th, td {
-  padding: 0.8rem;
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+
+label { font-size: 0.85rem; font-weight: 700; color: #475569; }
+
+input {
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+/* BotÃµes Estilizados */
+.action-bar { display: flex; gap: 12px; }
+.btn { padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.btn-primary { background: #2563eb; color: white; border: none; }
+.btn-outline { background: white; color: #64748b; border: 1px solid #cbd5e1; }
+
+/* Tabela Profissional */
+.styled-table { width: 100%; border-collapse: collapse; }
+.styled-table th {
+  background-color: #f1f5f9;
+  padding: 16px 24px;
   text-align: left;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
 }
 
-tbody tr:nth-child(even) {
-  background-color: #f8f9fa;
+.styled-table td {
+  padding: 16px 24px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.95rem;
 }
 
-.vazio {
-  text-align: center;
-  padding: 1rem;
-  color: #999;
+.text-bold { font-weight: 600; color: #1e293b; }
+
+.badge {
+  background: #dcfce7;
+  color: #166534;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 10px;
 }
 
-/* BOTÕES */
-.btn {
+.cargo-text { color: #64748b; font-size: 0.85rem; }
+
+/* AÃ§Ãµes na Tabela */
+.btn-action {
+  background: none;
   border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
+  font-weight: 700;
   cursor: pointer;
-  margin-right: 0.3rem;
-  font-size: 0.9rem;
 }
 
-/* NOVO */
-.btn--novo {
-  background-color: #ff8c00;
-  color: white;
-}
+.edit { color: #2563eb; margin-right: 15px; }
+.delete { color: #be123c; }
+.text-center { text-align: center; }
 
-.btn--novo:hover {
-  background-color: #e67e00;
-}
-
-/* EDITAR */
-.btn--editar {
-  background-color: #0d6efd;
-  color: white;
-}
-
-/* REMOVER */
-.btn--remover {
-  background-color: #dc3545;
-  color: white;
+@media (max-width: 600px) {
+  .form-row { grid-template-columns: 1fr; }
 }
 </style>

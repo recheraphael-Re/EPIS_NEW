@@ -4,7 +4,6 @@ import login from '../views/login.vue'
 import funcionario from '../views/funcionario.vue'
 import estoque from '../views/estoque.vue'
 import entrega from '../views/entrega.vue'
-import cadastro from '../views/cadastro.vue'
 import epi from '../views/epi.vue'
 import dashboard from '../views/dashboard.vue'
 import fornecedor from '../views/fornecedor.vue'
@@ -27,12 +26,10 @@ const routes = [
       { path: 'entrega', component: entrega },
       { path: 'fornecedor', component: fornecedor },
       { path: 'funcionario', component: funcionario },
-      { path: 'cadastro', component: cadastro },
       { path: 'epi', component: epi },
       { path: 'setor', component: setor},
       { path: 'relatorio', component: relatorio }
-      
-
+    
       ]
   }
 ]
