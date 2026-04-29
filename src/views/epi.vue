@@ -66,6 +66,7 @@
             <th>Validade</th>
             <th>Status</th>
             <th>Ações</th>
+            
           </tr>
         </thead>
 
@@ -106,56 +107,88 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, reactive, onMounted } from 'vue';
+import { useSupabase } from '../composables/useSupabase';
 
-const busca = ref("");
-
-const epis = ref([
-  { nome: "Capacete", quantidade: 20, validade: "2026-12-10" },
-  { nome: "Luva", quantidade: 50, validade: "2024-05-01" }
-]);
-
-const novoEPI = ref({
+const { supabase } = useSupabase();
+const epi = ref("");
+const editandoId = ref(null);
+const novoEPI = reactive({
   nome: "",
-  quantidade: 1,
-  validade: ""
+  descricao: "",
+  ca: "",
+  validade: "",
+  quantidade: "",
+ });
+
+
+import { ref, reactive, onMounted } from 'vue';
+import { useSupabase } from '../composables/useSupabase';
+
+const { supabase } = useSupabase();
+
+
+// Variáveis que controlam os dados na tela
+const epi = ref([]);
+const editandoId = ref(null);
+const form = reactive({ 
+  nome: '', 
+  descricao: '', 
+  ca: '', 
+  validade: '', 
+  quantidade: '' 
 });
 
-const episFiltrados = computed(() => {
-  return epis.value.filter(e =>
-    e.nome.toLowerCase().includes(busca.value.toLowerCase())
-  );
-});
-
-function adicionarEPI() {
-  if (!novoEPI.value.nome || !novoEPI.value.validade) {
-    alert("Preencha todos os campos!");
-    return;
+const carregar = async () => {
+  const { data, error } = await supabase.from('epi').select('*').order('nome');
+  if (error) {
+    console.error("Erro ao carregar:", error.message);
+  } else {
+    epi.value = data || [];
   }
+};
 
-  epis.value.push({ ...novoEPI.value });
-
-  novoEPI.value = {
-    nome: "",
-    quantidade: 1,
-    validade: ""
-  };
-}
-
-function remover(index) {
-  if (confirm("Deseja excluir este EPI?")) {
-    epis.value.splice(index, 1);
+// Salva um novo ou atualiza um existente
+const salvar = async () => {
+  if (editandoId.value) {
+    // Modo de Edição (Update)
+    await supabase.from('epi').update(form).eq('id', editandoId.value);
+  } else {
+    // Modo de Criação (Insert)
+    await supabase.from('epi').insert([form]);
   }
-}
+  cancelarEdicao();
+  carregar();
+};
 
-function isVencido(data) {
-  return new Date(data) < new Date();
-}
+// Prepara o formulário para edição ao clicar no botão
+const prepararEdicao = (e) => {
+  editandoId.value = e.id;
+  Object.assign(form, { 
+    nome: e.nome, 
+    descricao: e.descricao, 
+    ca: e.ca, 
+    validade: e.validade, 
+    quantidade: e.quantidade 
+  });
+};
 
-function formatarData(data) {
-  const d = new Date(data);
-  return d.toLocaleDateString("pt-BR");
-}
+// Deleta um registro
+const excluir = async (id) => {
+  if (confirm('Deseja realmente remover este registro?')) {
+    await supabase.from('epi').delete().eq('id', id);
+    carregar();
+  }
+};
+
+// Limpa o formulário e sai do modo de edição
+const cancelarEdicao = () => {
+  editandoId.value = null;
+  Object.assign(form, { nome: '', descricao: '', ca: '', validade: '', quantidade: '' });
+};
+
+// Inicia a busca de dados assim que a tela abre
+onMounted(carregar);
 </script>
 
 <style scoped>

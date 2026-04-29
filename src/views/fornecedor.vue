@@ -21,12 +21,31 @@
           />
         </div>
 
+        
         <div class="form__grupo">
           <label>CNPJ</label>
           <input
             type="text"
             v-model="novoFornecedor.cnpj"
             placeholder="00.000.000/0001-00"
+          />
+        </div>
+
+        <div class="form__grupo">
+          <label>Contato</label>
+          <input
+            type="text"
+            v-model="novoFornecedor.contato"
+            placeholder="Ex: João Silva"
+          />
+        </div>
+
+        <div class="form__grupo">
+          <label>E-mail</label>
+          <input
+            type="text"
+            v-model="novoFornecedor.email"
+            placeholder="exemplo@dominio.com"
           />
         </div>
 
@@ -96,10 +115,7 @@ import { ref, computed } from "vue";
 
 const busca = ref("");
 
-const fornecedores = ref([
-  { nome: "Empresa ABC", cnpj: "12.345.678/0001-90", telefone: "(11) 99999-1111" },
-  { nome: "Segurança Total", cnpj: "98.765.432/0001-10", telefone: "(11) 98888-2222" }
-]);
+const fornecedores = ref([]);
 
 const novoFornecedor = ref({
   nome: "",
