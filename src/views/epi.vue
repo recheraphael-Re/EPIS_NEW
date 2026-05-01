@@ -9,13 +9,13 @@
 
     <!-- FORM -->
     <section class="epi__form">
-      <form @submit.prevent="adicionarEPI">
+      <form @submit.prevent="salvar">
 
         <div class="form__grupo">
           <label>Nome do EPI</label>
           <input
             type="text"
-            v-model="novoEPI.nome"
+            v-model="form.nome"
             placeholder="Ex: Capacete"
             required
           />
@@ -25,7 +25,7 @@
           <label>Quantidade</label>
           <input
             type="number"
-            v-model="novoEPI.quantidade"
+            v-model="form.quantidade"
             min="1"
             required
           />
@@ -35,13 +35,17 @@
           <label>Validade</label>
           <input
             type="date"
-            v-model="novoEPI.validade"
+            v-model="form.validade"
             required
           />
         </div>
 
         <button type="submit" class="btn btn--salvar">
-          Adicionar EPI
+          {{ editandoId ? 'Salvar Alterações' : 'Adicionar EPI' }}
+        </button>
+
+        <button v-if="editandoId" type="button" class="btn btn--cancelar" @click="cancelarEdicao">
+          Cancelar
         </button>
 
       </form>
@@ -66,21 +70,20 @@
             <th>Validade</th>
             <th>Status</th>
             <th>Ações</th>
-            
           </tr>
         </thead>
 
         <tbody>
           <tr
-            v-for="(epi, index) in episFiltrados"
-            :key="index"
-            :class="{ vencido: isVencido(epi.validade) }"
+            v-for="item in episFiltrados"
+            :key="item.id"
+            :class="{ vencido: isVencido(item.validade) }"
           >
-            <td>{{ epi.nome }}</td>
-            <td>{{ epi.quantidade }}</td>
-            <td>{{ formatarData(epi.validade) }}</td>
+            <td>{{ item.nome }}</td>
+            <td>{{ item.quantidade }}</td>
+            <td>{{ formatarData(item.validade) }}</td>
             <td>
-              <span v-if="isVencido(epi.validade)" class="status status--vencido">
+              <span v-if="isVencido(item.validade)" class="status status--vencido">
                 Vencido
               </span>
               <span v-else class="status status--ok">
@@ -88,7 +91,10 @@
               </span>
             </td>
             <td>
-              <button class="btn btn--remover" @click="remover(index)">
+              <button class="btn btn--editar" @click="prepararEdicao(item)">
+                Editar
+              </button>
+              <button class="btn btn--remover" @click="excluir(item.id)">
                 Excluir
               </button>
             </td>
@@ -107,73 +113,66 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useSupabase } from '../composables/useSupabase';
-
-const { supabase } = useSupabase();
-const epi = ref("");
-const editandoId = ref(null);
-const novoEPI = reactive({
-  nome: "",
-  descricao: "",
-  ca: "",
-  validade: "",
-  quantidade: "",
- });
-
-
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useSupabase } from '../composables/useSupabase';
 
 const { supabase } = useSupabase();
 
-
-// Variáveis que controlam os dados na tela
+// Lista de EPIs carregados do banco
 const epi = ref([]);
 const editandoId = ref(null);
-const form = reactive({ 
-  nome: '', 
-  descricao: '', 
-  ca: '', 
-  validade: '', 
-  quantidade: '' 
+const busca = ref('');
+
+const form = reactive({
+  nome: '',
+  descricao: '',
+  ca: '',
+  validade: '',
+  quantidade: ''
 });
 
+// Lista filtrada pela busca
+const episFiltrados = computed(() => {
+  if (!busca.value) return epi.value;
+  return epi.value.filter(e =>
+    e.nome.toLowerCase().includes(busca.value.toLowerCase())
+  );
+});
+
+// Carrega todos os EPIs do Supabase
 const carregar = async () => {
   const { data, error } = await supabase.from('epi').select('*').order('nome');
   if (error) {
-    console.error("Erro ao carregar:", error.message);
+    console.error('Erro ao carregar:', error.message);
   } else {
     epi.value = data || [];
   }
 };
 
-// Salva um novo ou atualiza um existente
+// Insere ou atualiza um EPI
 const salvar = async () => {
   if (editandoId.value) {
-    // Modo de Edição (Update)
     await supabase.from('epi').update(form).eq('id', editandoId.value);
   } else {
-    // Modo de Criação (Insert)
-    await supabase.from('epi').insert([form]);
+    await supabase.from('epi').insert([{ ...form }]);
   }
   cancelarEdicao();
   carregar();
 };
 
-// Prepara o formulário para edição ao clicar no botão
+// Preenche o formulário com os dados do item para edição
 const prepararEdicao = (e) => {
   editandoId.value = e.id;
-  Object.assign(form, { 
-    nome: e.nome, 
-    descricao: e.descricao, 
-    ca: e.ca, 
-    validade: e.validade, 
-    quantidade: e.quantidade 
+  Object.assign(form, {
+    nome: e.nome,
+    descricao: e.descricao,
+    ca: e.ca,
+    validade: e.validade,
+    quantidade: e.quantidade
   });
 };
 
-// Deleta um registro
+// Exclui um EPI pelo id
 const excluir = async (id) => {
   if (confirm('Deseja realmente remover este registro?')) {
     await supabase.from('epi').delete().eq('id', id);
@@ -187,7 +186,19 @@ const cancelarEdicao = () => {
   Object.assign(form, { nome: '', descricao: '', ca: '', validade: '', quantidade: '' });
 };
 
-// Inicia a busca de dados assim que a tela abre
+// Verifica se a validade já passou
+const isVencido = (validade) => {
+  if (!validade) return false;
+  return new Date(validade) < new Date();
+};
+
+// Formata a data para exibição (DD/MM/AAAA)
+const formatarData = (validade) => {
+  if (!validade) return '-';
+  const [ano, mes, dia] = validade.split('-');
+  return `${dia}/${mes}/${ano}`;
+};
+
 onMounted(carregar);
 </script>
 
@@ -243,13 +254,14 @@ onMounted(carregar);
   border-color: #ff8c00;
 }
 
-/* BOTÃO */
+/* BOTÕES */
 .btn {
   padding: 0.6rem 1.2rem;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
+  margin-right: 0.5rem;
 }
 
 .btn--salvar {
@@ -259,6 +271,25 @@ onMounted(carregar);
 
 .btn--salvar:hover {
   background-color: #e67e00;
+}
+
+.btn--cancelar {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn--cancelar:hover {
+  background-color: #5a6268;
+}
+
+.btn--editar {
+  background-color: #1f3a5f;
+  color: white;
+}
+
+.btn--remover {
+  background-color: #dc3545;
+  color: white;
 }
 
 /* BUSCA */
@@ -321,12 +352,6 @@ tbody tr:nth-child(even) {
 /* VENCIDO */
 .vencido {
   background-color: #ffe5e5 !important;
-}
-
-/* BOTÃO REMOVER */
-.btn--remover {
-  background-color: #dc3545;
-  color: white;
 }
 
 /* VAZIO */

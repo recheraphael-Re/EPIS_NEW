@@ -92,7 +92,7 @@
             <td>{{ f.cnpj }}</td>
             <td>{{ f.telefone }}</td>
             <td>
-              <button class="btn btn--remover" @click="remover(index)">
+              <button class="btn btn--remover" @click="excluir(f.id)">
                 Excluir
               </button>
             </td>
@@ -111,44 +111,76 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, reactive, onMounted } from 'vue';
+import { useSupabase } from '../composables/useSupabase';
+
+const { supabase } = useSupabase();
 
 const busca = ref("");
-
 const fornecedores = ref([]);
-
-const novoFornecedor = ref({
+const editanoId = ref(null);
+const form = reactive({
   nome: "",
   cnpj: "",
+  contato: "",
+  email: "",  
   telefone: ""
 });
 
-const fornecedoresFiltrados = computed(() => {
-  return fornecedores.value.filter(f =>
-    f.nome.toLowerCase().includes(busca.value.toLowerCase())
-  );
-});
+const carregar = async () => {
+  const { data, error } = await supabase.from('fornecedores').select('*').order('nome');
+  if (error) {
+    console.error("Erro ao carregar:", error.message);
+  } else {
+    fornecedores.value = data || [];
 
-function adicionarFornecedor() {
-  if (!novoFornecedor.value.nome) {
-    alert("Digite o nome do fornecedor!");
-    return;
   }
+};
 
-  fornecedores.value.push({ ...novoFornecedor.value });
+const salvar = async () => {
+  if (editanoId.value) {
+     // Modo de Edição (Update)
+      await supabase.from('fornecedores').update(form).eq('id', editandoId.value);
+    } else {
+      // Modo de Criação (Insert)
+      await supabase.from('fornecedores').insert([form]); 
+  }
+  cancelarEdicao();
+  carregar();
 
-  novoFornecedor.value = {
+};
+
+// Prepara o formulário para edição ao clicar no botão
+  const prepararEdicao = (f) => {
+    editanoId.value = f.id;
+    Object.assign(form, { 
+      nome: f.nome, 
+      cnpj: f.cnpj, 
+      contato: f.contato, 
+      email: f.email, 
+      telefone: f.telefone
+    });
+  };
+
+  // Deleta um registro
+  const excluir = async (id) => {
+    await supabase.from('fornecedores').delete().eq('id', id);
+    carregar();
+  };
+
+ // Limpa o formulário e sai do modo de edição
+const cancelarEdicao = () => {
+  editanoId.value = null;
+  Object.assign(form, {  
     nome: "",
     cnpj: "",
-    telefone: ""
-  };
+    telefone: "",
+    contato: "",
+    email: "" 
+  });
 }
-
-function remover(index) {
-  if (confirm("Deseja excluir este fornecedor?")) {
-    fornecedores.value.splice(index, 1);
-  }
-}
+// Inicia a busca de dados assim que a tela abre
+onMounted(carregar);
 </script>
 
 <style scoped>
