@@ -1,362 +1,201 @@
 <template>
-  <main class="epi">
-
-    <!-- HEADER -->
-    <section class="epi__header">
-      <h1>Cadastro de EPIs</h1>
-      <p>Gerencie os equipamentos de proteção individual.</p>
-    </section>
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <h1>Cadastro de EPIs</h1>
+        <p>Gerencie os equipamentos de proteção individual</p>
+      </div>
+    </header>
 
     <!-- FORM -->
-    <section class="epi__form">
-      <form @submit.prevent="salvar">
-
-        <div class="form__grupo">
-          <label>Nome do EPI</label>
-          <input
-            type="text"
-            v-model="form.nome"
-            placeholder="Ex: Capacete"
-            required
-          />
+    <div class="card">
+      <div class="card-header">
+        <h2>
+          <i :class="editandoId ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+          {{ editandoId ? 'Editar EPI' : 'Novo EPI' }}
+        </h2>
+      </div>
+      <div class="card-body">
+        <div v-if="msg" :class="['alert', msg.tipo === 'ok' ? 'alert-success' : 'alert-error']">
+          <i :class="msg.tipo === 'ok' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
+          {{ msg.texto }}
         </div>
-
-        <div class="form__grupo">
-          <label>Quantidade</label>
-          <input
-            type="number"
-            v-model="form.quantidade"
-            min="1"
-            required
-          />
-        </div>
-
-        <div class="form__grupo">
-          <label>Validade</label>
-          <input
-            type="date"
-            v-model="form.validade"
-            required
-          />
-        </div>
-
-        <button type="submit" class="btn btn--salvar">
-          {{ editandoId ? 'Salvar Alterações' : 'Adicionar EPI' }}
-        </button>
-
-        <button v-if="editandoId" type="button" class="btn btn--cancelar" @click="cancelarEdicao">
-          Cancelar
-        </button>
-
-      </form>
-    </section>
-
-    <!-- BUSCA -->
-    <section class="epi__busca">
-      <input
-        type="text"
-        placeholder="Buscar EPI..."
-        v-model="busca"
-      />
-    </section>
+        <form @submit.prevent="salvar">
+          <div class="form-grid">
+            <div class="field">
+              <label>Nome do EPI</label>
+              <input v-model="form.nome" type="text" placeholder="Ex: Capacete de segurança" required />
+            </div>
+            <div class="field">
+              <label>Nº CA (Certificado)</label>
+              <input v-model="form.ca" type="text" placeholder="Ex: 12345" />
+            </div>
+            <div class="field">
+              <label>Quantidade</label>
+              <input v-model="form.quantidade" type="number" min="0" placeholder="0" required />
+            </div>
+            <div class="field">
+              <label>Validade</label>
+              <input v-model="form.validade" type="date" required />
+            </div>
+            <div class="field" style="grid-column: 1 / -1">
+              <label>Descrição</label>
+              <input v-model="form.descricao" type="text" placeholder="Descrição opcional" />
+            </div>
+          </div>
+          <div style="display:flex;gap:.75rem">
+            <button type="submit" class="btn-primary">
+              <i :class="editandoId ? 'fas fa-save' : 'fas fa-plus'"></i>
+              {{ editandoId ? 'Salvar Alterações' : 'Adicionar EPI' }}
+            </button>
+            <button v-if="editandoId" type="button" class="btn-outline" @click="cancelarEdicao">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- TABELA -->
-    <section class="epi__tabela">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Quantidade</th>
-            <th>Validade</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr
-            v-for="item in episFiltrados"
-            :key="item.id"
-            :class="{ vencido: isVencido(item.validade) }"
-          >
-            <td>{{ item.nome }}</td>
-            <td>{{ item.quantidade }}</td>
-            <td>{{ formatarData(item.validade) }}</td>
-            <td>
-              <span v-if="isVencido(item.validade)" class="status status--vencido">
-                Vencido
-              </span>
-              <span v-else class="status status--ok">
-                OK
-              </span>
-            </td>
-            <td>
-              <button class="btn btn--editar" @click="prepararEdicao(item)">
-                Editar
-              </button>
-              <button class="btn btn--remover" @click="excluir(item.id)">
-                Excluir
-              </button>
-            </td>
-          </tr>
-
-          <tr v-if="episFiltrados.length === 0">
-            <td colspan="5" class="vazio">
-              Nenhum EPI encontrado
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-  </main>
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-hard-hat"></i> EPIs Cadastrados ({{ epi.length }})</h2>
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input v-model="busca" type="text" placeholder="Buscar EPI..." />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div v-if="loading" class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+        <table v-else class="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CA</th>
+              <th>Quantidade</th>
+              <th>Validade</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in episFiltrados" :key="item.id">
+              <td class="nome-epi">{{ item.nome }}</td>
+              <td><code class="ca-code">{{ item.ca || '—' }}</code></td>
+              <td>
+                <span :class="['qtd', item.quantidade <= 5 ? 'qtd-baixa' : '']">
+                  {{ item.quantidade }}
+                </span>
+              </td>
+              <td>{{ formatarData(item.validade) }}</td>
+              <td>
+                <span :class="['badge', isVencido(item.validade) ? 'badge-vencido' : 'badge-ok']">
+                  <i :class="isVencido(item.validade) ? 'fas fa-times-circle' : 'fas fa-check-circle'"></i>
+                  {{ isVencido(item.validade) ? 'Vencido' : 'Válido' }}
+                </span>
+              </td>
+              <td>
+                <div class="btn-actions">
+                  <button class="btn-sm btn-edit" @click="prepararEdicao(item)">
+                    <i class="fas fa-pen"></i> Editar
+                  </button>
+                  <button class="btn-sm btn-del" @click="excluir(item.id)">
+                    <i class="fas fa-trash"></i> Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="episFiltrados.length === 0">
+              <td colspan="6" class="empty">
+                <i class="fas fa-hard-hat" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#cbd5e1"></i>
+                {{ busca ? 'Nenhum EPI encontrado para "' + busca + '"' : 'Nenhum EPI cadastrado' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useSupabase } from '../composables/useSupabase';
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useSupabase } from '../composables/useSupabase'
 
-const { supabase } = useSupabase();
+const { supabase } = useSupabase()
 
-// Lista de EPIs carregados do banco
-const epi = ref([]);
-const editandoId = ref(null);
-const busca = ref('');
+const epi = ref([])
+const editandoId = ref(null)
+const busca = ref('')
+const loading = ref(true)
+const msg = ref(null)
 
-const form = reactive({
-  nome: '',
-  descricao: '',
-  ca: '',
-  validade: '',
-  quantidade: ''
-});
+const form = reactive({ nome: '', descricao: '', ca: '', validade: '', quantidade: '' })
 
-// Lista filtrada pela busca
 const episFiltrados = computed(() => {
-  if (!busca.value) return epi.value;
-  return epi.value.filter(e =>
-    e.nome.toLowerCase().includes(busca.value.toLowerCase())
-  );
-});
+  if (!busca.value) return epi.value
+  return epi.value.filter(e => e.nome?.toLowerCase().includes(busca.value.toLowerCase()))
+})
 
-// Carrega todos os EPIs do Supabase
+function showMsg(texto, tipo = 'ok') {
+  msg.value = { texto, tipo }
+  setTimeout(() => { msg.value = null }, 3000)
+}
+
 const carregar = async () => {
-  const { data, error } = await supabase.from('epi').select('*').order('nome');
-  if (error) {
-    console.error('Erro ao carregar:', error.message);
-  } else {
-    epi.value = data || [];
-  }
-};
+  loading.value = true
+  const { data, error } = await supabase.from('epi').select('*').order('nome')
+  if (error) showMsg('Erro ao carregar EPIs.', 'err')
+  else epi.value = data || []
+  loading.value = false
+}
 
-// Insere ou atualiza um EPI
 const salvar = async () => {
-  if (editandoId.value) {
-    await supabase.from('epi').update(form).eq('id', editandoId.value);
-  } else {
-    await supabase.from('epi').insert([{ ...form }]);
-  }
-  cancelarEdicao();
-  carregar();
-};
+  const { error } = editandoId.value
+    ? await supabase.from('epi').update({ ...form }).eq('id', editandoId.value)
+    : await supabase.from('epi').insert([{ ...form }])
 
-// Preenche o formulário com os dados do item para edição
+  if (error) { showMsg('Erro ao salvar: ' + error.message, 'err'); return }
+  showMsg(editandoId.value ? 'EPI atualizado!' : 'EPI cadastrado!')
+  cancelarEdicao()
+  carregar()
+}
+
 const prepararEdicao = (e) => {
-  editandoId.value = e.id;
-  Object.assign(form, {
-    nome: e.nome,
-    descricao: e.descricao,
-    ca: e.ca,
-    validade: e.validade,
-    quantidade: e.quantidade
-  });
-};
+  editandoId.value = e.id
+  Object.assign(form, { nome: e.nome, descricao: e.descricao, ca: e.ca, validade: e.validade, quantidade: e.quantidade })
+}
 
-// Exclui um EPI pelo id
 const excluir = async (id) => {
-  if (confirm('Deseja realmente remover este registro?')) {
-    await supabase.from('epi').delete().eq('id', id);
-    carregar();
-  }
-};
+  if (!confirm('Deseja remover este EPI?')) return
+  const { error } = await supabase.from('epi').delete().eq('id', id)
+  if (error) showMsg('Erro ao excluir.', 'err')
+  else { showMsg('EPI removido.'); carregar() }
+}
 
-// Limpa o formulário e sai do modo de edição
 const cancelarEdicao = () => {
-  editandoId.value = null;
-  Object.assign(form, { nome: '', descricao: '', ca: '', validade: '', quantidade: '' });
-};
+  editandoId.value = null
+  Object.assign(form, { nome: '', descricao: '', ca: '', validade: '', quantidade: '' })
+}
 
-// Verifica se a validade já passou
-const isVencido = (validade) => {
-  if (!validade) return false;
-  return new Date(validade) < new Date();
-};
+const isVencido = (v) => v ? new Date(v) < new Date() : false
 
-// Formata a data para exibição (DD/MM/AAAA)
-const formatarData = (validade) => {
-  if (!validade) return '-';
-  const [ano, mes, dia] = validade.split('-');
-  return `${dia}/${mes}/${ano}`;
-};
+const formatarData = (v) => {
+  if (!v) return '—'
+  const [a, m, d] = v.split('-')
+  return `${d}/${m}/${a}`
+}
 
-onMounted(carregar);
+onMounted(carregar)
 </script>
 
 <style scoped>
-/* BASE */
-.epi {
-  padding: 2rem;
-  background-color: #f5f6f8;
-  min-height: 100vh;
+.nome-epi { font-weight: 600; color: #0f172a; }
+.ca-code {
+  background: #f1f5f9; color: #475569;
+  padding: .15rem .45rem; border-radius: 4px;
+  font-size: .78rem; font-family: monospace;
 }
-
-/* HEADER */
-.epi__header h1 {
-  color: #1f3a5f;
-  margin-bottom: 0.3rem;
-}
-
-.epi__header p {
-  color: #6c757d;
-  margin-bottom: 1.5rem;
-}
-
-/* FORM */
-.epi__form {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  max-width: 500px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.form__grupo {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 1rem;
-}
-
-.form__grupo label {
-  font-weight: 600;
-  margin-bottom: 0.3rem;
-  color: #1f3a5f;
-}
-
-.form__grupo input {
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.form__grupo input:focus {
-  outline: none;
-  border-color: #ff8c00;
-}
-
-/* BOTÕES */
-.btn {
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-right: 0.5rem;
-}
-
-.btn--salvar {
-  background-color: #ff8c00;
-  color: white;
-}
-
-.btn--salvar:hover {
-  background-color: #e67e00;
-}
-
-.btn--cancelar {
-  background-color: #6c757d;
-  color: white;
-}
-
-.btn--cancelar:hover {
-  background-color: #5a6268;
-}
-
-.btn--editar {
-  background-color: #1f3a5f;
-  color: white;
-}
-
-.btn--remover {
-  background-color: #dc3545;
-  color: white;
-}
-
-/* BUSCA */
-.epi__busca {
-  margin-bottom: 1rem;
-}
-
-.epi__busca input {
-  width: 100%;
-  max-width: 300px;
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-/* TABELA */
-.epi__tabela {
-  background: white;
-  padding: 1rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background-color: #1f3a5f;
-  color: white;
-}
-
-th, td {
-  padding: 0.8rem;
-}
-
-tbody tr:nth-child(even) {
-  background-color: #f8f9fa;
-}
-
-/* STATUS */
-.status {
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.status--ok {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status--vencido {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-/* VENCIDO */
-.vencido {
-  background-color: #ffe5e5 !important;
-}
-
-/* VAZIO */
-.vazio {
-  text-align: center;
-  color: #999;
-}
+.qtd { font-weight: 700; color: #0f172a; }
+.qtd-baixa { color: #dc2626; }
 </style>

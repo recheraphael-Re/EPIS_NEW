@@ -2,9 +2,9 @@
   <header class=navbar>
 
     <div class="navbar__marca">
-        <img  axe-liner (image-alt): Imagens must have alternative text
+        <img
         src="../assets/logoEPI.jpg"
-        alt= "Logo EPI"
+        alt="Logo EPI"
         class="navbar__logo"
         />
 
@@ -48,7 +48,7 @@ export default {
   padding: 10px 20px;
   height: 58px;
   border-bottom: 1px solid #444;
-  gap: 1rem
+  gap: 1rem;
 }
 .navbar__marca {
   display: flex;

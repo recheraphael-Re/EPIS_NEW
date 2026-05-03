@@ -1,256 +1,305 @@
 <template>
-  <div class="layout-container">
-    
-    <header class="header-section">
-      <h1>Controle de Efetivo</h1>
-      <p>Gerencie o cadastro de colaboradores e organize por setores.</p>
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <h1>Funcionários</h1>
+        <p>Gerencie o cadastro de colaboradores e organize por setores</p>
+      </div>
+      <!-- botão sempre visível — garante que o form está em modo NOVO -->
+      <button class="btn-primary" @click="novoFuncionario">
+        <i class="fas fa-user-plus"></i> Novo Funcionário
+      </button>
     </header>
 
-    <main class="content">
-      <section class="card-form">
-        <div class="card-header">
-          <h3>{{ editandoId ? 'Alterar Registro' : 'Novo Funcionário' }}</h3>
+    <!-- ── BANNER DE ALERTA: modo edição ── -->
+    <div v-if="editandoId" class="banner-edicao">
+      <i class="fas fa-pen-to-square"></i>
+      <span>Você está <strong>editando</strong> o funcionário <strong>{{ nomeEditando }}</strong>. Para adicionar um novo, clique em "Novo Funcionário".</span>
+      <button class="btn-cancelar-banner" @click="novoFuncionario">
+        <i class="fas fa-times"></i> Cancelar edição
+      </button>
+    </div>
+
+    <!-- ── FORMULÁRIO ── -->
+    <div class="card" :class="{ 'card-editando': editandoId }">
+      <div class="card-header">
+        <h2>
+          <i :class="editandoId ? 'fas fa-user-edit' : 'fas fa-user-plus'"></i>
+          {{ editandoId ? 'Alterar dados do funcionário' : 'Cadastrar novo funcionário' }}
+        </h2>
+      </div>
+      <div class="card-body">
+        <div v-if="msg" :class="['alert', msg.tipo === 'ok' ? 'alert-success' : 'alert-error']">
+          <i :class="msg.tipo === 'ok' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
+          {{ msg.texto }}
         </div>
-        
-        <form @submit.prevent="salvar" class="main-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="nome">Nome Completo</label>
-              <input v-model="form.nome" type="text" id="nome" placeholder="Digite o nome completo" required>
+
+        <form @submit.prevent="salvar" ref="formEl">
+          <div class="form-grid">
+            <div class="field">
+              <label>Nome Completo</label>
+              <input v-model="form.nome" type="text" placeholder="Ex: João da Silva" required />
             </div>
-            <div class="form-group">
-              <label for="matricula">Nº Matrícula</label>
-              <input v-model="form.matricula" type="text" id="matricula" placeholder="Ex: sp554" required>
+            <div class="field">
+              <label>Nº Matrícula</label>
+              <input v-model="form.matricula" type="text" placeholder="Ex: SP554" required />
+            </div>
+            <div class="field">
+              <label>Setor</label>
+              <input v-model="form.setor" type="text" placeholder="Ex: Manutenção" required />
+            </div>
+            <div class="field">
+              <label>Cargo</label>
+              <input v-model="form.cargo" type="text" placeholder="Ex: Operador" required />
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="setor">Setor</label>
-              <input v-model="form.setor" type="text" id="setor" placeholder="Ex: Manutenção" required>
-            </div>
-            <div class="form-group">
-              <label for="cargo">Cargo</label>
-              <input v-model="form.cargo" type="text" id="cargo" placeholder="Ex: Pedreiro" required>
-            </div>
-          </div>
-          
-          <div class="action-bar">
-            <button type="submit" class="btn btn-primary">
-              {{ editandoId ? 'Atualizar Dados' : 'Finalizar Cadastro' }}
+          <div class="form-actions">
+            <button type="submit" :class="editandoId ? 'btn-update' : 'btn-primary'" :disabled="salvando">
+              <i v-if="salvando" class="fas fa-spinner fa-spin"></i>
+              <i v-else :class="editandoId ? 'fas fa-save' : 'fas fa-plus'"></i>
+              {{ salvando ? 'Salvando...' : editandoId ? 'Salvar Alterações' : 'Cadastrar Funcionário' }}
             </button>
-            <button v-if="editandoId" type="button" @click="cancelarEdicao" class="btn btn-outline">
-              Cancelar
+            <button v-if="editandoId" type="button" class="btn-outline" @click="novoFuncionario">
+              <i class="fas fa-times"></i> Cancelar
             </button>
           </div>
         </form>
-      </section>
+      </div>
+    </div>
 
-      <section class="card-table">
-        <table class="styled-table">
+    <!-- ── TABELA ── -->
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-list"></i> Colaboradores ({{ funcionarios.length }})</h2>
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input v-model="busca" type="text" placeholder="Buscar por nome, setor, matrícula..." />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div v-if="loading" class="loading">
+          <i class="fas fa-spinner fa-spin"></i> Carregando...
+        </div>
+        <table v-else class="table">
           <thead>
             <tr>
               <th>Colaborador</th>
               <th>Matrícula</th>
-              <th>Setor / Cargo</th>
-              <th class="text-center">Gerenciar</th>
+              <th>Setor</th>
+              <th>Cargo</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="f in funcionarios" :key="f.id">
-              <td><span class="text-bold">{{ f.nome }}</span></td>
-              <td>{{ f.matricula }}</td>
+            <tr
+              v-for="f in funcionariosFiltrados"
+              :key="f.id"
+              :class="{ 'row-editando': f.id === editandoId }"
+            >
               <td>
-                <span class="badge">{{ f.setor }}</span>
-                <span class="cargo-text">{{ f.cargo }}</span>
+                <div class="nome-cell">
+                  <span class="avatar">{{ f.nome?.charAt(0) }}</span>
+                  <span class="nome-bold">{{ f.nome }}</span>
+                </div>
               </td>
-              <td class="text-center">
-                <button @click="prepararEdicao(f)" class="btn-action edit">Editar</button>
-                <button @click="excluir(f.id)" class="btn-action delete">Excluir</button>
+              <td><code class="matricula">{{ f.matricula }}</code></td>
+              <td><span class="badge badge-setor">{{ f.setor }}</span></td>
+              <td>{{ f.cargo }}</td>
+              <td>
+                <div class="btn-actions">
+                  <button class="btn-sm btn-edit" @click="prepararEdicao(f)">
+                    <i class="fas fa-pen"></i> Editar
+                  </button>
+                  <button class="btn-sm btn-del" @click="excluir(f.id)" :disabled="f.id === editandoId">
+                    <i class="fas fa-trash"></i> Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="funcionariosFiltrados.length === 0">
+              <td colspan="5" class="empty">
+                <i class="fas fa-users" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#cbd5e1"></i>
+                {{ busca ? 'Nenhum resultado para "' + busca + '"' : 'Nenhum funcionário cadastrado' }}
               </td>
             </tr>
           </tbody>
         </table>
-      </section>
-    </main>
-
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useSupabase } from '../composables/useSupabase';
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useSupabase } from '../composables/useSupabase'
 
-const { supabase } = useSupabase();
+const { supabase } = useSupabase()
 
+const funcionarios  = ref([])
+const editandoId    = ref(null)
+const nomeEditando  = ref('')
+const busca         = ref('')
+const loading       = ref(true)
+const salvando      = ref(false)
+const msg           = ref(null)
+const formEl        = ref(null)
 
-// Variáveis que controlam os dados na tela
-const funcionarios = ref([]);
-const editandoId = ref(null);
-const form = reactive({ 
-  nome: '', 
-  matricula: '', 
-  setor: '', 
-  cargo: '' 
-});
+const form = reactive({ nome: '', matricula: '', setor: '', cargo: '' })
+
+const funcionariosFiltrados = computed(() => {
+  if (!busca.value) return funcionarios.value
+  const q = busca.value.toLowerCase()
+  return funcionarios.value.filter(f =>
+    f.nome?.toLowerCase().includes(q) ||
+    f.setor?.toLowerCase().includes(q) ||
+    f.matricula?.toLowerCase().includes(q)
+  )
+})
+
+function showMsg(texto, tipo = 'ok') {
+  msg.value = { texto, tipo }
+  setTimeout(() => { msg.value = null }, 4000)
+}
+
+// Sempre reseta para modo INSERT — chamado pelo botão "Novo Funcionário"
+function novoFuncionario() {
+  editandoId.value  = null
+  nomeEditando.value = ''
+  Object.assign(form, { nome: '', matricula: '', setor: '', cargo: '' })
+  formEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 const carregar = async () => {
-  const { data, error } = await supabase.from('funcionarios').select('*').order('nome');
-  if (error) {
-    console.error("Erro ao carregar:", error.message);
-  } else {
-    funcionarios.value = data || [];
-  }
-};
+  loading.value = true
+  const { data, error } = await supabase.from('funcionarios').select('*').order('nome')
+  if (error) showMsg('Erro ao carregar dados: ' + error.message, 'err')
+  else funcionarios.value = data || []
+  loading.value = false
+}
 
-// Salva um novo ou atualiza um existente
 const salvar = async () => {
+  salvando.value = true
+
+  let error
   if (editandoId.value) {
-    // Modo de Edição (Update)
-    await supabase.from('funcionarios').update(form).eq('id', editandoId.value);
+    // ── UPDATE: atualiza o registro existente ──
+    ;({ error } = await supabase
+      .from('funcionarios')
+      .update({ nome: form.nome, matricula: form.matricula, setor: form.setor, cargo: form.cargo })
+      .eq('id', editandoId.value))
   } else {
-    // Modo de Criação (Insert)
-    await supabase.from('funcionarios').insert([form]);
+    // ── INSERT: adiciona um NOVO registro ──
+    ;({ error } = await supabase
+      .from('funcionarios')
+      .insert([{ nome: form.nome, matricula: form.matricula, setor: form.setor, cargo: form.cargo }]))
   }
-  cancelarEdicao();
-  carregar();
-};
 
-// Prepara o formulário para edição ao clicar no botão
+  salvando.value = false
+
+  if (error) {
+    const msg_erro = error.code === '23505'
+      ? 'Matrícula já cadastrada. Use uma matrícula diferente.'
+      : 'Erro ao salvar: ' + error.message
+    showMsg(msg_erro, 'err')
+    return
+  }
+
+  showMsg(editandoId.value ? `Funcionário "${form.nome}" atualizado!` : `Funcionário "${form.nome}" cadastrado!`)
+  novoFuncionario()
+  carregar()
+}
+
 const prepararEdicao = (f) => {
-  editandoId.value = f.id;
-  Object.assign(form, { 
-    nome: f.nome, 
-    matricula: f.matricula, 
-    setor: f.setor, 
-    cargo: f.cargo 
-  });
-};
+  editandoId.value   = f.id
+  nomeEditando.value = f.nome
+  Object.assign(form, { nome: f.nome, matricula: f.matricula, setor: f.setor, cargo: f.cargo })
+  formEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
-// Deleta um registro
 const excluir = async (id) => {
-  if (confirm('Deseja realmente remover este registro?')) {
-    await supabase.from('funcionarios').delete().eq('id', id);
-    carregar();
-  }
-};
+  if (!confirm('Deseja remover este funcionário?')) return
+  const { error } = await supabase.from('funcionarios').delete().eq('id', id)
+  if (error) showMsg('Erro ao excluir: ' + error.message, 'err')
+  else { showMsg('Funcionário removido.'); carregar() }
+}
 
-// Limpa o formulário e sai do modo de edição
-const cancelarEdicao = () => {
-  editandoId.value = null;
-  Object.assign(form, { nome: '', matricula: '', setor: '', cargo: '' });
-};
-
-// Inicia a busca de dados assim que a tela abre
-onMounted(carregar);
+onMounted(carregar)
 </script>
 
 <style scoped>
- 
-.layout-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  background-color: #f8fafc;
-  min-height: 100vh;
+/* Banner de aviso de modo edição */
+.banner-edicao {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: .75rem 1.25rem;
+  margin-bottom: 1rem;
+  font-size: .875rem;
+  color: #78350f;
+  flex-wrap: wrap;
 }
+.banner-edicao i { color: #d97706; flex-shrink: 0; }
+.banner-edicao span { flex: 1; }
 
-.header-section { margin-bottom: 30px; }
-.header-section h1 { color: #0f172a; font-size: 1.8rem; }
-.header-section p { color: #64748b; }
-
-/* Cards */
-.card-form, .card-table {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  margin-bottom: 30px;
-  overflow: hidden;
-}
-
-.card-header {
-  background-color: #f8fafc;
-  padding: 15px 24px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.main-form { padding: 24px; }
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.form-group { display: flex; flex-direction: column; gap: 8px; }
-
-label { font-size: 0.85rem; font-weight: 700; color: #475569; }
-
-input {
-  padding: 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 1rem;
-}
-
-input:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-}
-
-/* BotÃµes Estilizados */
-.action-bar { display: flex; gap: 12px; }
-.btn { padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-.btn-primary { background: #2563eb; color: white; border: none; }
-.btn-outline { background: white; color: #64748b; border: 1px solid #cbd5e1; }
-
-/* Tabela Profissional */
-.styled-table { width: 100%; border-collapse: collapse; }
-.styled-table th {
-  background-color: #f1f5f9;
-  padding: 16px 24px;
-  text-align: left;
-  font-size: 0.75rem;
-  color: #64748b;
-  text-transform: uppercase;
-}
-
-.styled-table td {
-  padding: 16px 24px;
-  border-top: 1px solid #f1f5f9;
-  font-size: 0.95rem;
-}
-
-.text-bold { font-weight: 600; color: #1e293b; }
-
-.badge {
-  background: #dcfce7;
-  color: #166534;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-right: 10px;
-}
-
-.cargo-text { color: #64748b; font-size: 0.85rem; }
-
-/* AÃ§Ãµes na Tabela */
-.btn-action {
-  background: none;
-  border: none;
-  font-weight: 700;
+.btn-cancelar-banner {
+  padding: .35rem .85rem;
+  background: #fff;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  color: #78350f;
+  font-size: .8rem;
+  font-weight: 600;
   cursor: pointer;
+  font-family: inherit;
+  display: flex; align-items: center; gap: .35rem;
+  transition: background .15s;
+}
+.btn-cancelar-banner:hover { background: #fef9c3; }
+
+/* Card com borda laranja no modo edição */
+.card-editando { border: 2px solid #f97316 !important; }
+
+/* Botão de update (laranja escuro) */
+.btn-update {
+  padding: .625rem 1.25rem;
+  background: #ea6e0a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-family: inherit;
+  transition: background .15s;
+}
+.btn-update:hover { background: #c2570b; }
+.btn-update:disabled { opacity: .65; cursor: not-allowed; }
+
+.form-actions { display: flex; gap: .75rem; margin-top: .25rem; }
+
+/* Nome célula */
+.nome-cell { display: flex; align-items: center; gap: .6rem; }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #e0e7ff; color: #3730a3;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 700;
+  text-transform: uppercase; flex-shrink: 0;
+}
+.nome-bold { font-weight: 600; color: #0f172a; }
+.matricula {
+  background: #f1f5f9; color: #475569;
+  padding: .15rem .45rem; border-radius: 4px;
+  font-size: .78rem; font-family: monospace;
 }
 
-.edit { color: #2563eb; margin-right: 15px; }
-.delete { color: #be123c; }
-.text-center { text-align: center; }
-
-@media (max-width: 600px) {
-  .form-row { grid-template-columns: 1fr; }
-}
+/* Linha sendo editada fica destacada */
+.row-editando { background: #fff7ed !important; }
+.row-editando td { border-left: 3px solid #f97316; }
+.row-editando:first-child td { border-left: 3px solid #f97316; }
 </style>

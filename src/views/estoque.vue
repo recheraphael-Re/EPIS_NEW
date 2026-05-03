@@ -1,284 +1,184 @@
 <template>
-  <main class="estoque">
-
-    <!-- HEADER -->
-    <section class="estoque__header">
+  <div class="page">
+    <header class="page-header">
       <div>
         <h1>Estoque de EPIs</h1>
-        <p>Controle e acompanhe os equipamentos disponíveis.</p>
+        <p>Monitore a disponibilidade e validade dos equipamentos</p>
       </div>
-
-      <button class="btn btn--novo" @click="novoItem">
-        + Novo EPI
+      <button class="btn-primary" @click="irParaEpi">
+        <i class="fas fa-plus"></i> Novo EPI
       </button>
-    </section>
+    </header>
 
-    <!-- BUSCA -->
-    <section class="estoque__busca">
-      <input
-        type="text"
-        placeholder="Buscar EPI..."
-        v-model="busca"
-      />
-    </section>
-
-    <!-- CARDS RESUMO -->
-    <section class="estoque__cards">
-      <div class="card">
-        <h2>{{ totalEPIs }}</h2>
-        <p>Total de EPIs</p>
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card" style="border-left-color:#3b82f6">
+        <div class="stat-icon" style="background:#eff6ff;color:#3b82f6"><i class="fas fa-boxes"></i></div>
+        <div class="stat-info">
+          <span class="stat-val">{{ totalEPIs }}</span>
+          <span class="stat-label">Total de EPIs</span>
+        </div>
       </div>
-
-      <div class="card">
-        <h2>{{ totalDisponivel }}</h2>
-        <p>Disponíveis</p>
+      <div class="stat-card" style="border-left-color:#22c55e">
+        <div class="stat-icon" style="background:#f0fdf4;color:#22c55e"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+          <span class="stat-val">{{ totalDisponivel }}</span>
+          <span class="stat-label">Com validade OK</span>
+        </div>
       </div>
-
-      <div class="card alerta">
-        <h2>{{ totalVencidos }}</h2>
-        <p>Vencidos</p>
+      <div class="stat-card" style="border-left-color:#ef4444">
+        <div class="stat-icon" style="background:#fef2f2;color:#ef4444"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info">
+          <span class="stat-val">{{ totalVencidos }}</span>
+          <span class="stat-label">EPIs Vencidos</span>
+        </div>
       </div>
-    </section>
+      <div class="stat-card" style="border-left-color:#f97316">
+        <div class="stat-icon" style="background:#fff7ed;color:#f97316"><i class="fas fa-layer-group"></i></div>
+        <div class="stat-info">
+          <span class="stat-val">{{ totalQuantidade }}</span>
+          <span class="stat-label">Unidades em estoque</span>
+        </div>
+      </div>
+    </div>
 
     <!-- TABELA -->
-    <section class="estoque__tabela">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Quantidade</th>
-            <th>Validade</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr
-            v-for="(item, index) in itensFiltrados"
-            :key="index"
-            :class="{ vencido: isVencido(item.validade) }"
-          >
-            <td>{{ item.nome }}</td>
-            <td>{{ item.quantidade }}</td>
-            <td>{{ formatarData(item.validade) }}</td>
-            <td>
-              <span v-if="isVencido(item.validade)" class="status status--vencido">
-                Vencido
-              </span>
-              <span v-else class="status status--ok">
-                OK
-              </span>
-            </td>
-            <td>
-              <button class="btn btn--editar" @click="editar(item)">Editar</button>
-              <button class="btn btn--remover" @click="remover(index)">Excluir</button>
-            </td>
-          </tr>
-
-          <tr v-if="itensFiltrados.length === 0">
-            <td colspan="5" class="vazio">
-              Nenhum item encontrado
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-  </main>
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-warehouse"></i> Inventário</h2>
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input v-model="busca" type="text" placeholder="Buscar EPI..." />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div v-if="loading" class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+        <table v-else class="table">
+          <thead>
+            <tr>
+              <th>EPI</th>
+              <th>CA</th>
+              <th>Quantidade</th>
+              <th>Validade</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in itensFiltrados" :key="item.id" :class="{ 'row-vencida': isVencido(item.validade) }">
+              <td class="nome-epi">{{ item.nome }}</td>
+              <td><code class="ca-code">{{ item.ca || '—' }}</code></td>
+              <td>
+                <div class="qty-bar">
+                  <span :class="['qty-num', item.quantidade <= 5 ? 'qty-low' : '']">{{ item.quantidade }}</span>
+                  <span class="qty-unit">un.</span>
+                </div>
+              </td>
+              <td>{{ formatarData(item.validade) }}</td>
+              <td>
+                <span :class="['badge', isVencido(item.validade) ? 'badge-vencido' : 'badge-ok']">
+                  <i :class="isVencido(item.validade) ? 'fas fa-times-circle' : 'fas fa-check-circle'"></i>
+                  {{ isVencido(item.validade) ? 'Vencido' : 'OK' }}
+                </span>
+              </td>
+              <td>
+                <div class="btn-actions">
+                  <button class="btn-sm btn-edit" @click="irParaEpi">
+                    <i class="fas fa-pen"></i> Editar
+                  </button>
+                  <button class="btn-sm btn-del" @click="remover(item.id)">
+                    <i class="fas fa-trash"></i> Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="itensFiltrados.length === 0">
+              <td colspan="6" class="empty">
+                <i class="fas fa-boxes" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#cbd5e1"></i>
+                {{ busca ? 'Nenhum resultado para "' + busca + '"' : 'Estoque vazio' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useSupabase } from '../composables/useSupabase'
 
-const busca = ref("");
+const { supabase } = useSupabase()
+const router = useRouter()
 
-const itens = ref([
-  { nome: "Capacete", quantidade: 20, validade: "2026-12-10" },
-  { nome: "Luva", quantidade: 50, validade: "2024-05-01" },
-  { nome: "Bota", quantidade: 15, validade: "2025-01-15" }
-]);
+const itens = ref([])
+const busca = ref('')
+const loading = ref(true)
 
 const itensFiltrados = computed(() => {
-  return itens.value.filter(item =>
-    item.nome.toLowerCase().includes(busca.value.toLowerCase())
-  );
-});
+  if (!busca.value) return itens.value
+  return itens.value.filter(i => i.nome?.toLowerCase().includes(busca.value.toLowerCase()))
+})
 
-const totalEPIs = computed(() => itens.value.length);
+const totalEPIs = computed(() => itens.value.length)
+const totalDisponivel = computed(() => itens.value.filter(i => !isVencido(i.validade)).length)
+const totalVencidos = computed(() => itens.value.filter(i => isVencido(i.validade)).length)
+const totalQuantidade = computed(() => itens.value.reduce((s, i) => s + (Number(i.quantidade) || 0), 0))
 
-const totalDisponivel = computed(() =>
-  itens.value.filter(item => !isVencido(item.validade)).length
-);
-
-const totalVencidos = computed(() =>
-  itens.value.filter(item => isVencido(item.validade)).length
-);
-
-function isVencido(data) {
-  return new Date(data) < new Date();
+const carregar = async () => {
+  loading.value = true
+  const { data, error } = await supabase.from('epi').select('*').order('nome')
+  if (!error) itens.value = data || []
+  loading.value = false
 }
 
-function formatarData(data) {
-  const d = new Date(data);
-  return d.toLocaleDateString("pt-BR");
+function isVencido(v) { return v ? new Date(v) < new Date() : false }
+
+function formatarData(v) {
+  if (!v) return '—'
+  const [a, m, d] = v.split('-')
+  return `${d}/${m}/${a}`
 }
 
-function novoItem() {
-  alert("Ir para cadastro de EPI");
+function irParaEpi() { router.push('/applayout/epi') }
+
+async function remover(id) {
+  if (!confirm('Deseja excluir este EPI do estoque?')) return
+  await supabase.from('epi').delete().eq('id', id)
+  carregar()
 }
 
-function editar(item) {
-  alert(`Editar: ${item.nome}`);
-}
-
-function remover(index) {
-  if (confirm("Deseja excluir este item?")) {
-    itens.value.splice(index, 1);
-  }
-}
+onMounted(carregar)
 </script>
 
 <style scoped>
-/* BASE */
-.estoque {
-  padding: 2rem;
-  background-color: #f5f6f8;
-  min-height: 100vh;
-}
-
-/* HEADER */
-.estoque__header {
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.estoque__header h1 {
-  color: #1f3a5f;
-}
-
-.estoque__header p {
-  color: #6c757d;
-}
-
-/* BUSCA */
-.estoque__busca {
-  margin-bottom: 1rem;
-}
-
-.estoque__busca input {
-  width: 100%;
-  max-width: 300px;
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.estoque__busca input:focus {
-  outline: none;
-  border-color: #ff8c00;
-}
-
-/* CARDS */
-.estoque__cards {
-  display: flex;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-left: 4px solid transparent;
 }
+.stat-icon {
+  width: 46px; height: 46px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem; flex-shrink: 0;
+}
+.stat-info { display: flex; flex-direction: column; }
+.stat-val { font-size: 1.9rem; font-weight: 700; color: #0f172a; line-height: 1; }
+.stat-label { font-size: .78rem; color: #64748b; margin-top: .3rem; }
 
-.card {
-  flex: 1;
-  background: white;
-  padding: 1rem;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.card h2 {
-  color: #1f3a5f;
-}
-
-.card.alerta {
-  border: 2px solid #ff8c00;
-}
-
-/* TABELA */
-.estoque__tabela {
-  background: white;
-  padding: 1rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background-color: #1f3a5f;
-  color: white;
-}
-
-th, td {
-  padding: 0.8rem;
-}
-
-tbody tr:nth-child(even) {
-  background-color: #f8f9fa;
-}
-
-.vencido {
-  background-color: #ffe5e5 !important;
-}
-
-/* STATUS */
-.status {
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.status--ok {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status--vencido {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-/* BOTÕES */
-.btn {
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-right: 0.3rem;
-}
-
-.btn--novo {
-  background-color: #ff8c00;
-  color: white;
-}
-
-.btn--editar {
-  background-color: #0d6efd;
-  color: white;
-}
-
-.btn--remover {
-  background-color: #dc3545;
-  color: white;
-}
-
-.vazio {
-  text-align: center;
-  color: #999;
-}
+.nome-epi { font-weight: 600; color: #0f172a; }
+.ca-code { background:#f1f5f9;color:#475569;padding:.15rem .45rem;border-radius:4px;font-size:.78rem;font-family:monospace; }
+.qty-bar { display:flex;align-items:baseline;gap:.25rem; }
+.qty-num { font-weight: 700; font-size: 1rem; color: #0f172a; }
+.qty-low { color: #dc2626; }
+.qty-unit { font-size: .75rem; color: #94a3b8; }
+.row-vencida { background: #fff5f5 !important; }
 </style>
