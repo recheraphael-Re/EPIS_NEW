@@ -31,16 +31,8 @@
               <input v-model="form.ca" type="text" placeholder="Ex: 12345" />
             </div>
             <div class="field">
-              <label>Quantidade</label>
-              <input v-model="form.quantidade" type="number" min="0" placeholder="0" required />
-            </div>
-            <div class="field">
               <label>Validade</label>
               <input v-model="form.validade" type="date" required />
-            </div>
-            <div class="field" style="grid-column: 1 / -1">
-              <label>Descrição</label>
-              <input v-model="form.descricao" type="text" placeholder="Descrição opcional" />
             </div>
           </div>
           <div style="display:flex;gap:.75rem">
@@ -72,7 +64,6 @@
             <tr>
               <th>Nome</th>
               <th>CA</th>
-              <th>Quantidade</th>
               <th>Validade</th>
               <th>Status</th>
               <th>Ações</th>
@@ -82,11 +73,6 @@
             <tr v-for="item in episFiltrados" :key="item.id">
               <td class="nome-epi">{{ item.nome }}</td>
               <td><code class="ca-code">{{ item.ca || '—' }}</code></td>
-              <td>
-                <span :class="['qtd', item.quantidade <= 5 ? 'qtd-baixa' : '']">
-                  {{ item.quantidade }}
-                </span>
-              </td>
               <td>{{ formatarData(item.validade) }}</td>
               <td>
                 <span :class="['badge', isVencido(item.validade) ? 'badge-vencido' : 'badge-ok']">
@@ -106,7 +92,7 @@
               </td>
             </tr>
             <tr v-if="episFiltrados.length === 0">
-              <td colspan="6" class="empty">
+              <td colspan="5" class="empty">
                 <i class="fas fa-hard-hat" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#cbd5e1"></i>
                 {{ busca ? 'Nenhum EPI encontrado para "' + busca + '"' : 'Nenhum EPI cadastrado' }}
               </td>
@@ -130,7 +116,7 @@ const busca = ref('')
 const loading = ref(true)
 const msg = ref(null)
 
-const form = reactive({ nome: '', descricao: '', ca: '', validade: '', quantidade: '' })
+const form = reactive({ nome: '', ca: '', validade: '' })
 
 const episFiltrados = computed(() => {
   if (!busca.value) return epi.value
@@ -163,7 +149,7 @@ const salvar = async () => {
 
 const prepararEdicao = (e) => {
   editandoId.value = e.id
-  Object.assign(form, { nome: e.nome, descricao: e.descricao, ca: e.ca, validade: e.validade, quantidade: e.quantidade })
+  Object.assign(form, { nome: e.nome, ca: e.ca, validade: e.validade })
 }
 
 const excluir = async (id) => {
@@ -175,7 +161,7 @@ const excluir = async (id) => {
 
 const cancelarEdicao = () => {
   editandoId.value = null
-  Object.assign(form, { nome: '', descricao: '', ca: '', validade: '', quantidade: '' })
+  Object.assign(form, { nome: '', ca: '', validade: '' })
 }
 
 const isVencido = (v) => v ? new Date(v) < new Date() : false
