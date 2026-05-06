@@ -64,7 +64,17 @@
                 <span :class="['badge', isVencido(e.validade) ? 'badge-vencido' : 'badge-ok']" style="margin-left:auto;flex-shrink:0">
                   {{ isVencido(e.validade) ? 'Vencido' : 'Válido' }}
                 </span>
-                <span class="epi-qty">{{ e.quantidade }} un.</span>
+                <div v-if="episSelecionados.includes(e.id)" class="qty-wrapper" @click.stop>
+                  <label class="qty-label">Quantidade</label>
+                  <input
+                    type="number"
+                    :value="quantidades[e.id] || 1"
+                    @input="quantidades[e.id] = +$event.target.value"
+                    min="1"
+                    class="qty-input"
+                  />
+                </div>
+                <span v-else class="epi-qty">{{ e.quantidade }} un.</span>
               </label>
 
               <div v-if="episFiltradosForm.length === 0" class="epi-empty">
@@ -73,8 +83,19 @@
             </div>
           </div>
 
+          <!-- Assinatura digital (obrigatória) -->
+          <div class="assinatura-field">
+            <label class="assinatura-label" :class="{ 'assinatura-ativa': form.assinatura_digital }">
+              <input type="checkbox" v-model="form.assinatura_digital" class="assinatura-check" />
+              <span class="assinatura-box">
+                <i :class="form.assinatura_digital ? 'fas fa-check-square' : 'far fa-square'"></i>
+              </span>
+              <span>Funcionário assinou o recibo de entrega <strong>(assinatura digital)</strong> <span class="obrigatorio">*obrigatório</span></span>
+            </label>
+          </div>
+
           <div class="form-actions" style="margin-top:1.25rem">
-            <button type="submit" class="btn-primary" :disabled="salvando || episSelecionados.length === 0">
+            <button type="submit" class="btn-primary" :disabled="salvando || episSelecionados.length === 0 || !form.assinatura_digital">
               <i v-if="salvando" class="fas fa-spinner fa-spin"></i>
               <i v-else class="fas fa-check"></i>
               {{ salvando ? 'Registrando...' : `Registrar Entrega (${episSelecionados.length} EPI${episSelecionados.length !== 1 ? 's' : ''})` }}
@@ -103,6 +124,8 @@
             <tr>
               <th>Funcionário</th>
               <th>EPIs Entregues</th>
+              <th class="text-center">Qtd</th>
+              <th class="text-center">Assinatura</th>
               <th>Data</th>
               <th>Ações</th>
             </tr>
@@ -127,6 +150,15 @@
                   </span>
                 </div>
               </td>
+              <td class="text-center">
+                <strong>{{ grupo.totalQtd }}</strong>
+              </td>
+              <td class="text-center">
+                <span :class="grupo.assinado ? 'badge badge-ok' : 'badge badge-warn'">
+                  <i :class="grupo.assinado ? 'fas fa-check-circle' : 'fas fa-clock'"></i>
+                  {{ grupo.assinado ? 'Assinado' : 'Pendente' }}
+                </span>
+              </td>
               <td>{{ formatarData(grupo.data) }}</td>
               <td>
                 <button class="btn-sm btn-del" @click="removerGrupo(grupo.ids)">
@@ -135,7 +167,7 @@
               </td>
             </tr>
             <tr v-if="entregasAgrupadas.length === 0">
-              <td colspan="4" class="empty">
+              <td colspan="6" class="empty">
                 <i class="fas fa-box-open" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#cbd5e1"></i>
                 {{ busca ? 'Nenhum resultado para "' + busca + '"' : 'Nenhuma entrega registrada' }}
               </td>
@@ -157,13 +189,14 @@ const funcionarios   = ref([])
 const epis           = ref([])
 const entregas       = ref([])
 const episSelecionados = ref([])  // array de IDs dos EPIs marcados
+const quantidades      = ref({})  // { [epi_id]: number }
 const busca          = ref('')
 const buscaEpi       = ref('')
 const loading        = ref(true)
 const salvando       = ref(false)
 const msg            = ref(null)
 
-const form = reactive({ funcionario_id: '', data: '' })
+const form = reactive({ funcionario_id: '', data: '', assinatura_digital: false })
 
 // ── Filtro de EPIs no formulário ──
 const episFiltradosForm = computed(() => {
@@ -183,7 +216,6 @@ const entregasAgrupadas = computed(() => {
 
   const mapa = new Map()
   for (const e of filtradas) {
-    // chave única: id do funcionário + data
     const chave = `${e.funcionario_id}_${e.data}`
     if (!mapa.has(chave)) {
       mapa.set(chave, {
@@ -191,12 +223,16 @@ const entregasAgrupadas = computed(() => {
         funcionarioNome: e.funcionarios?.nome ?? '—',
         data: e.data,
         epis: [],
-        ids: []
+        ids: [],
+        totalQtd: 0,
+        assinado: false
       })
     }
     const grupo = mapa.get(chave)
     if (e.epi) grupo.epis.push(e.epi)
     grupo.ids.push(e.id)
+    grupo.totalQtd += e.quantidade_entregue || 1
+    if (e.assinatura_digital) grupo.assinado = true
   }
   return [...mapa.values()]
 })
@@ -207,8 +243,9 @@ function showMsg(texto, tipo = 'ok') {
 }
 
 function limparForm() {
-  Object.assign(form, { funcionario_id: '', data: '' })
+  Object.assign(form, { funcionario_id: '', data: '', assinatura_digital: false })
   episSelecionados.value = []
+  quantidades.value = {}
   buscaEpi.value = ''
 }
 
@@ -219,6 +256,8 @@ const carregar = async () => {
     supabase.from('epi').select('id, nome, ca, validade, quantidade').order('nome'),
     supabase
       .from('entregas')
+      // após rodar o ALTER TABLE, descomente a linha abaixo e remova a de cima:
+      // .select('id, data, funcionario_id, quantidade_entregue, assinatura_digital, funcionarios(id, nome), epi(id, nome)')
       .select('id, data, funcionario_id, funcionarios(id, nome), epi(id, nome)')
       .order('data', { ascending: false })
   ])
@@ -238,14 +277,21 @@ async function registrarEntrega() {
     showMsg('Selecione pelo menos um EPI.', 'err')
     return
   }
+  if (!form.assinatura_digital) {
+    showMsg('A assinatura digital do funcionário é obrigatória.', 'err')
+    return
+  }
 
   salvando.value = true
 
   // Cria uma linha por EPI selecionado
+  // ATENÇÃO: quantidade_entregue e assinatura_digital serão ativados após rodar o ALTER TABLE no Supabase
   const linhas = episSelecionados.value.map(epi_id => ({
     funcionario_id: form.funcionario_id,
     epi_id,
     data: form.data
+    // quantidade_entregue: quantidades.value[epi_id] || 1,
+    // assinatura_digital: form.assinatura_digital
   }))
 
   const { error } = await supabase.from('entregas').insert(linhas)
@@ -346,6 +392,58 @@ onMounted(carregar)
 /* ── Badges de EPIs na tabela (empilhados) ── */
 .epis-badges { display: flex; flex-wrap: wrap; gap: .3rem; }
 
+/* ── Quantidade inline no item de EPI ── */
+.qty-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+}
+.qty-label {
+  font-size: .65rem;
+  font-weight: 700;
+  color: #f97316;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.qty-input {
+  width: 70px;
+  padding: .25rem .4rem;
+  border: 1.5px solid #f97316;
+  border-radius: 6px;
+  font-size: .85rem;
+  font-weight: 700;
+  color: #c2570b;
+  text-align: center;
+}
+
+/* ── Assinatura digital ── */
+.assinatura-field { margin-top: 1.25rem; }
+.assinatura-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  cursor: pointer;
+  padding: .7rem 1.1rem;
+  border-radius: 8px;
+  border: 2px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: .875rem;
+  color: #475569;
+  transition: all .15s;
+  user-select: none;
+}
+.assinatura-label.assinatura-ativa {
+  border-color: #10b981;
+  background: #f0fdf4;
+  color: #166534;
+}
+.assinatura-check { display: none; }
+.assinatura-box i { font-size: 1.1rem; }
+.assinatura-label.assinatura-ativa .assinatura-box i { color: #10b981; }
+.obrigatorio { color: #dc2626; font-size: .75rem; font-weight: 700; margin-left: .3rem; }
+
 /* ── Outros ── */
 .nome-cell { display: flex; align-items: center; gap: .6rem; }
 .avatar {
@@ -355,4 +453,7 @@ onMounted(carregar)
   font-size: .75rem; font-weight: 700; text-transform: uppercase; flex-shrink: 0;
 }
 .form-actions { display: flex; gap: .75rem; }
+.text-center { text-align: center; }
+.badge-ok   { background: #dcfce7; color: #166534; }
+.badge-warn { background: #fee2e2; color: #991b1b; }
 </style>
