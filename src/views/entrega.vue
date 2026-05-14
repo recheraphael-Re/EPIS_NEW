@@ -256,9 +256,7 @@ const carregar = async () => {
     supabase.from('epi').select('id, nome, ca, validade, quantidade').order('nome'),
     supabase
       .from('entregas')
-      // após rodar o ALTER TABLE, descomente a linha abaixo e remova a de cima:
-      // .select('id, data, funcionario_id, quantidade_entregue, assinatura_digital, funcionarios(id, nome), epi(id, nome)')
-      .select('id, data, funcionario_id, funcionarios(id, nome), epi(id, nome)')
+      .select('id, data, funcionario_id, quantidade_entregue, assinatura_digital, funcionarios(id, nome), epi(id, nome)')
       .order('data', { ascending: false })
   ])
   if (error) showMsg('Erro ao carregar: ' + error.message, 'err')
@@ -285,13 +283,12 @@ async function registrarEntrega() {
   salvando.value = true
 
   // Cria uma linha por EPI selecionado
-  // ATENÇÃO: quantidade_entregue e assinatura_digital serão ativados após rodar o ALTER TABLE no Supabase
   const linhas = episSelecionados.value.map(epi_id => ({
     funcionario_id: form.funcionario_id,
     epi_id,
-    data: form.data
-    // quantidade_entregue: quantidades.value[epi_id] || 1,
-    // assinatura_digital: form.assinatura_digital
+    data: form.data,
+    quantidade_entregue: quantidades.value[epi_id] || 1,
+    assinatura_digital: form.assinatura_digital
   }))
 
   const { error } = await supabase.from('entregas').insert(linhas)

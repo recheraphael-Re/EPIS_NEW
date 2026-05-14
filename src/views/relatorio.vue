@@ -5,9 +5,14 @@
         <h1>Relatórios</h1>
         <p>Consulte e filtre o histórico de entregas de EPIs</p>
       </div>
-      <button class="btn-outline" @click="imprimir">
-        <i class="fas fa-print"></i> Imprimir
-      </button>
+      <div style="display:flex;gap:.6rem">
+        <button class="btn-outline" @click="imprimir">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button class="btn-primary" @click="exportarPDF" :disabled="entregasFiltradas.length === 0">
+          <i class="fas fa-file-pdf"></i> Exportar PDF
+        </button>
+      </div>
     </header>
 
     <!-- FILTROS -->
@@ -60,6 +65,8 @@
               <th>#</th>
               <th>Funcionário</th>
               <th>EPI Entregue</th>
+              <th class="text-center">Qtd</th>
+              <th class="text-center">Assinatura</th>
               <th>Data</th>
             </tr>
           </thead>
@@ -73,10 +80,17 @@
                 </div>
               </td>
               <td><span class="badge badge-setor">{{ e.epi }}</span></td>
+              <td class="text-center"><strong>{{ e.quantidade_entregue || 1 }}</strong></td>
+              <td class="text-center">
+                <span :class="e.assinatura_digital ? 'badge badge-ok' : 'badge badge-warn'">
+                  <i :class="e.assinatura_digital ? 'fas fa-check-circle' : 'fas fa-clock'"></i>
+                  {{ e.assinatura_digital ? 'Assinado' : 'Pendente' }}
+                </span>
+              </td>
               <td>{{ formatarData(e.data) }}</td>
             </tr>
             <tr v-if="entregasFiltradas.length === 0">
-              <td colspan="4" class="empty">
+              <td colspan="6" class="empty">
                 <i class="fas fa-search" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#cbd5e1"></i>
                 Nenhum registro encontrado para os filtros aplicados
               </td>
@@ -91,6 +105,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useSupabase } from '../composables/useSupabase'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const { supabase } = useSupabase()
 
@@ -104,10 +120,9 @@ const carregar = async () => {
   loading.value = true
   const { data, error } = await supabase
     .from('entregas')
-    .select('id, data, funcionarios(nome), epi(nome)')
+    .select('id, data, quantidade_entregue, assinatura_digital, funcionarios(nome), epi(nome)')
     .order('data', { ascending: false })
   if (!error) {
-    // normaliza para ter .funcionario e .epi como texto (mesma interface do filtro)
     todasEntregas.value = (data || []).map(e => ({
       ...e,
       funcionario: e.funcionarios?.nome ?? '—',
@@ -137,8 +152,32 @@ function limparFiltros() {
 
 function formatarData(data) {
   if (!data) return '—'
-  const d = new Date(data + 'T00:00:00')
-  return d.toLocaleDateString('pt-BR')
+  return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR')
+}
+
+function exportarPDF() {
+  const doc = new jsPDF()
+  doc.setFontSize(18)
+  doc.text('Relatório de Entregas de EPIs', 14, 20)
+  doc.setFontSize(10)
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28)
+
+  autoTable(doc, {
+    startY: 35,
+    head: [['#', 'Funcionário', 'EPI', 'Qtd', 'Assinatura', 'Data']],
+    body: entregasFiltradas.value.map((e, i) => [
+      i + 1,
+      e.funcionario,
+      e.epi,
+      e.quantidade_entregue || 1,
+      e.assinatura_digital ? 'SIM' : 'NÃO',
+      formatarData(e.data)
+    ]),
+    theme: 'grid',
+    headStyles: { fillColor: [37, 99, 235] }
+  })
+
+  doc.save(`relatorio-epis-${filtro.value.dataInicio || 'geral'}.pdf`)
 }
 
 function imprimir() { window.print() }
@@ -168,6 +207,9 @@ onMounted(carregar)
   font-size: .7rem; font-weight: 700; text-transform: uppercase; flex-shrink: 0;
 }
 .row-num { color: #94a3b8; font-size: .8rem; width: 40px; }
+.text-center { text-align: center; }
+.badge-ok   { background: #dcfce7; color: #166534; }
+.badge-warn { background: #fee2e2; color: #991b1b; }
 
 @media print {
   .no-print { display: none !important; }

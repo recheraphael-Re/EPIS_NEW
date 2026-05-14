@@ -23,6 +23,24 @@
       </div>
     </div>
 
+    <!-- GRÁFICOS -->
+    <div class="dashboard-grid">
+      <div class="card chart-card">
+        <div class="card-header"><h2><i class="fas fa-chart-pie"></i> Saúde do Inventário</h2></div>
+        <div class="chart-box">
+          <Pie v-if="estoqueProcessado.length > 0" :data="pieChartData" :options="chartOptions" :key="'pie-' + chartKey" />
+          <div v-else class="chart-placeholder"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <div class="card-header"><h2><i class="fas fa-chart-bar"></i> Níveis Críticos</h2></div>
+        <div class="chart-box">
+          <Bar v-if="estoqueProcessado.length > 0" :data="barChartData" :options="chartOptions" :key="'bar-' + chartKey" />
+          <div v-else class="chart-placeholder"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ÚLTIMAS ENTREGAS -->
     <div class="card">
       <div class="card-header">
@@ -67,8 +85,37 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useSupabase } from '../composables/useSupabase'
+import { Pie, Bar } from 'vue-chartjs'
+import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js'
+
+ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement)
 
 const { supabase } = useSupabase()
+
+const estoqueProcessado = ref([])
+const chartKey = ref(0)
+
+const pieChartData = computed(() => {
+  const d = estoqueProcessado.value
+  return {
+    labels: ['Estoque OK', 'Estoque Baixo', 'Esgotado'],
+    datasets: [{ backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], data: [
+      d.filter(i => i.quantidade >= 10).length,
+      d.filter(i => i.quantidade < 10 && i.quantidade > 0).length,
+      d.filter(i => i.quantidade <= 0).length
+    ]}]
+  }
+})
+
+const barChartData = computed(() => {
+  const criticos = [...estoqueProcessado.value].sort((a, b) => a.quantidade - b.quantidade).slice(0, 5)
+  return {
+    labels: criticos.map(i => i.nome_epi),
+    datasets: [{ label: 'Qtd Atual', backgroundColor: '#ef4444', data: criticos.map(i => i.quantidade) }]
+  }
+})
+
+const chartOptions = { responsive: true, maintainAspectRatio: false }
 
 const totalFuncionarios = ref(0)
 const totalEPIs = ref(0)
@@ -88,6 +135,7 @@ const carregar = async () => {
   loading.value = true
   const hoje = new Date().toISOString().split('T')[0]
 
+  // Stats — independentes dos gráficos
   const [
     { count: cf },
     { count: ce },
@@ -108,6 +156,22 @@ const carregar = async () => {
   totalEntregas.value = cnt || 0
   entregasRecentes.value = rec || []
   loading.value = false
+
+  // Gráficos — separado para não bloquear os stats
+  const { data: episData, error: erroGrafico } = await supabase
+    .from('epi')
+    .select('id, nome, quantidade')
+
+  if (erroGrafico) {
+    console.error('Erro ao carregar gráficos:', erroGrafico.message)
+    return
+  }
+
+  estoqueProcessado.value = (episData || []).map(item => ({
+    ...item,
+    nome_epi: item.nome
+  }))
+  chartKey.value++
 }
 
 function formatarData(data) {
@@ -145,6 +209,12 @@ onMounted(carregar)
 .stat-info { display: flex; flex-direction: column; }
 .stat-val { font-size: 1.9rem; font-weight: 700; color: #0f172a; line-height: 1; }
 .stat-label { font-size: 0.78rem; color: #64748b; margin-top: 0.3rem; }
+
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 1.5rem; }
+.chart-card .card-header { margin-bottom: .75rem; }
+.chart-card .card-header h2 { font-size: .95rem; color: #1e293b; margin: 0; }
+.chart-box { height: 240px; position: relative; }
+.chart-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; gap: .5rem; }
 
 .nome-cell {
   display: flex;
