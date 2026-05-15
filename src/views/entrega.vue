@@ -55,14 +55,24 @@
                 class="epi-item"
                 :class="{
                   'epi-item--selecionado': episSelecionados.includes(e.id),
-                  'epi-item--vencido': isVencido(e.validade)
+                  'epi-item--vencido': estaVencido(e),
+                  'epi-item--sem-estoque': saldoDe(e.id) <= 0
                 }"
               >
-                <input type="checkbox" :value="e.id" v-model="episSelecionados" class="epi-check" />
+                <input
+                  type="checkbox"
+                  :value="e.id"
+                  v-model="episSelecionados"
+                  class="epi-check"
+                  :disabled="estaVencido(e) || saldoDe(e.id) <= 0"
+                />
                 <span class="epi-nome">{{ e.nome }}</span>
                 <span v-if="e.ca" class="epi-ca">CA {{ e.ca }}</span>
-                <span :class="['badge', isVencido(e.validade) ? 'badge-vencido' : 'badge-ok']" style="margin-left:auto;flex-shrink:0">
-                  {{ isVencido(e.validade) ? 'Vencido' : 'Válido' }}
+                <span :class="['badge', estaVencido(e) ? 'badge-vencido' : 'badge-ok']" style="flex-shrink:0">
+                  {{ estaVencido(e) ? motivoVencimento(e) : 'Válido' }}
+                </span>
+                <span :class="['badge', saldoDe(e.id) <= 0 ? 'badge-vencido' : saldoDe(e.id) <= 5 ? 'badge-baixo' : 'badge-ok']" style="margin-left:auto;flex-shrink:0">
+                  <i class="fas fa-warehouse"></i> {{ saldoDe(e.id) }} un.
                 </span>
                 <div v-if="episSelecionados.includes(e.id)" class="qty-wrapper" @click.stop>
                   <label class="qty-label">Quantidade</label>
@@ -71,10 +81,11 @@
                     :value="quantidades[e.id] || 1"
                     @input="quantidades[e.id] = +$event.target.value"
                     min="1"
+                    :max="saldoDe(e.id)"
                     class="qty-input"
+                    :class="{ 'qty-input--erro': (quantidades[e.id] || 1) > saldoDe(e.id) }"
                   />
                 </div>
-                <span v-else class="epi-qty">{{ e.quantidade }} un.</span>
               </label>
 
               <div v-if="episFiltradosForm.length === 0" class="epi-empty">
@@ -188,6 +199,7 @@ const { supabase } = useSupabase()
 const funcionarios   = ref([])
 const epis           = ref([])
 const entregas       = ref([])
+const movEstoque     = ref([])    // movimentações do estoque para calcular saldo
 const episSelecionados = ref([])  // array de IDs dos EPIs marcados
 const quantidades      = ref({})  // { [epi_id]: number }
 const busca          = ref('')
@@ -251,19 +263,45 @@ function limparForm() {
 
 const carregar = async () => {
   loading.value = true
-  const [{ data: funcs }, { data: episData }, { data: entData, error }] = await Promise.all([
+  const [{ data: funcs }, { data: episData }, { data: entData, error }, { data: movData }] = await Promise.all([
     supabase.from('funcionarios').select('id, nome').order('nome'),
-    supabase.from('epi').select('id, nome, ca, validade, quantidade').order('nome'),
+    supabase.from('epi').select('id, nome, ca, validade, validade_epi').order('nome'),
     supabase
       .from('entregas')
       .select('id, data, funcionario_id, quantidade_entregue, assinatura_digital, funcionarios(id, nome), epi(id, nome)')
-      .order('data', { ascending: false })
+      .order('data', { ascending: false }),
+    supabase.from('estoque').select('epi_id, tipo, quantidade')
   ])
   if (error) showMsg('Erro ao carregar: ' + error.message, 'err')
   funcionarios.value = funcs   || []
   epis.value         = episData || []
   entregas.value     = entData  || []
+  movEstoque.value   = movData  || []
   loading.value = false
+}
+
+// ── Saldo em estoque por EPI ──
+const saldosMapa = computed(() => {
+  const m = new Map()
+  for (const mov of movEstoque.value) {
+    const atual = m.get(mov.epi_id) || 0
+    // entrada soma; saida e baixa subtraem
+    m.set(mov.epi_id, atual + (mov.tipo === 'entrada' ? mov.quantidade : -mov.quantidade))
+  }
+  return m
+})
+function saldoDe(epiId) { return saldosMapa.value.get(epiId) || 0 }
+
+// ── Validações de vencimento ──
+function estaVencido(e) {
+  if (isVencido(e.validade)) return true
+  if (e.validade_epi && isVencido(e.validade_epi)) return true
+  return false
+}
+function motivoVencimento(e) {
+  if (isVencido(e.validade)) return 'CA vencido'
+  if (e.validade_epi && isVencido(e.validade_epi)) return 'EPI vencido'
+  return 'Vencido'
 }
 
 async function registrarEntrega() {
@@ -280,6 +318,27 @@ async function registrarEntrega() {
     return
   }
 
+  // ── Validação: EPIs vencidos e saldo de estoque ──
+  const funcionarioNome = funcionarios.value.find(f => f.id === form.funcionario_id)?.nome ?? 'funcionário'
+  for (const epiId of episSelecionados.value) {
+    const epi = epis.value.find(e => e.id === epiId)
+    if (!epi) continue
+    if (estaVencido(epi)) {
+      showMsg(`Não é possível entregar "${epi.nome}": ${motivoVencimento(epi)}. Atualize o cadastro antes.`, 'err')
+      return
+    }
+    const qtd = quantidades.value[epiId] || 1
+    const saldo = saldoDe(epiId)
+    if (qtd > saldo) {
+      showMsg(`Estoque insuficiente para "${epi.nome}": pedido ${qtd}, disponível ${saldo}.`, 'err')
+      return
+    }
+    if (qtd <= 0) {
+      showMsg(`Quantidade inválida para "${epi.nome}".`, 'err')
+      return
+    }
+  }
+
   salvando.value = true
 
   // Cria uma linha por EPI selecionado
@@ -292,20 +351,59 @@ async function registrarEntrega() {
   }))
 
   const { error } = await supabase.from('entregas').insert(linhas)
+
+  if (error) {
+    salvando.value = false
+    showMsg('Erro ao registrar: ' + error.message, 'err')
+    return
+  }
+
+  // Baixa automática no estoque (uma saída por EPI entregue)
+  const saidas = linhas.map(l => ({
+    epi_id: l.epi_id,
+    tipo: 'saida',
+    quantidade: l.quantidade_entregue,
+    data: l.data,
+    observacao: `Entrega para ${funcionarioNome}`
+  }))
+  const { error: errEstoque } = await supabase.from('estoque').insert(saidas)
+
   salvando.value = false
 
-  if (error) { showMsg('Erro ao registrar: ' + error.message, 'err'); return }
-
-  const qtd = episSelecionados.value.length
-  showMsg(`${qtd} EPI${qtd > 1 ? 's entregues' : ' entregue'} com sucesso!`)
+  if (errEstoque) {
+    showMsg('Entrega registrada, mas falhou ao baixar estoque: ' + errEstoque.message, 'err')
+  } else {
+    const qtd = episSelecionados.value.length
+    showMsg(`${qtd} EPI${qtd > 1 ? 's entregues' : ' entregue'} com sucesso! Estoque atualizado.`)
+  }
   limparForm()
   carregar()
 }
 
 async function removerGrupo(ids) {
   const qtd = ids.length
-  if (!confirm(`Deseja excluir esta entrega (${qtd} EPI${qtd > 1 ? 's' : ''})?`)) return
-  await supabase.from('entregas').delete().in('id', ids)
+  if (!confirm(`Deseja excluir esta entrega (${qtd} EPI${qtd > 1 ? 's' : ''})? O estoque será restituído.`)) return
+
+  // Busca os registros antes de deletar para devolver ao estoque
+  const { data: registros } = await supabase
+    .from('entregas')
+    .select('epi_id, data, quantidade_entregue, funcionarios(nome)')
+    .in('id', ids)
+
+  const { error } = await supabase.from('entregas').delete().in('id', ids)
+  if (error) { showMsg('Erro ao excluir: ' + error.message, 'err'); return }
+
+  if (registros && registros.length) {
+    const estornos = registros.map(r => ({
+      epi_id: r.epi_id,
+      tipo: 'entrada',
+      quantidade: r.quantidade_entregue || 1,
+      data: new Date().toISOString().slice(0, 10),
+      observacao: `Estorno de entrega (${r.funcionarios?.nome ?? 'funcionário'})`
+    }))
+    await supabase.from('estoque').insert(estornos)
+  }
+  showMsg('Entrega excluída e estoque restituído.')
   carregar()
 }
 
@@ -367,7 +465,13 @@ onMounted(carregar)
 .epi-item--selecionado { background: #fff7ed !important; }
 .epi-item--selecionado .epi-nome { color: #c2570b; font-weight: 600; }
 
-.epi-item--vencido { opacity: .6; }
+.epi-item--vencido { opacity: .55; }
+.epi-item--vencido .epi-check { cursor: not-allowed; }
+.epi-item--sem-estoque { background: #fef2f2; opacity: .7; }
+.epi-item--sem-estoque .epi-check { cursor: not-allowed; }
+
+.qty-input--erro { border-color: #dc2626 !important; background: #fef2f2; color: #dc2626 !important; }
+.badge-baixo { background: #fff7ed; color: #9a3412; }
 
 .epi-check { width: 16px; height: 16px; accent-color: #f97316; flex-shrink: 0; cursor: pointer; }
 
