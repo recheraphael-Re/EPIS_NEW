@@ -13,14 +13,6 @@
     <nav aria-label="Menu principal">
         <ul class="navbar__lista">
             <li><RouterLink to="/" class="navbar__link">Home</RouterLink></li>
-            <li><RouterLink to="/funcionario" class="navbar__link">Funcionário</RouterLink></li>
-            <li><RouterLink to="/estoque" class="navbar__link">Estoque</RouterLink></li>
-            <li><RouterLink to="/entrega" class="navbar__link">Entrega</RouterLink></li>
-            <li><RouterLink to="/cadastro" class="navbar__link">Cadastro</RouterLink></li>
-            <li><RouterLink to="/epi" class="navbar__link">EPI</RouterLink></li>
-            <li><RouterLink to="/dashboard" class="navbar__link">Dashboard</RouterLink></li>
-            <li><RouterLink to="/fornecedor" class="navbar__link">Fornecedor</RouterLink></li>
-            <li><RouterLink to="/setor" class="navbar__link">Setor</RouterLink></li>
 
       </ul>
     </nav>

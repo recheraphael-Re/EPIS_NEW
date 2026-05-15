@@ -31,8 +31,19 @@
               <input v-model="form.ca" type="text" placeholder="Ex: 12345" />
             </div>
             <div class="field">
-              <label>Validade</label>
+              <label>Validade do CA</label>
               <input v-model="form.validade" type="date" required />
+            </div>
+            <div class="field">
+              <label>O EPI tem data de validade?</label>
+              <select v-model="form.tem_validade_epi">
+                <option :value="false">Não</option>
+                <option :value="true">Sim</option>
+              </select>
+            </div>
+            <div class="field" v-if="form.tem_validade_epi">
+              <label>Data de validade do EPI</label>
+              <input v-model="form.validade_epi" type="date" required />
             </div>
           </div>
           <div style="display:flex;gap:.75rem">
@@ -64,7 +75,8 @@
             <tr>
               <th>Nome</th>
               <th>CA</th>
-              <th>Validade</th>
+              <th>Validade do CA</th>
+              <th>Validade do EPI</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -74,6 +86,12 @@
               <td class="nome-epi">{{ item.nome }}</td>
               <td><code class="ca-code">{{ item.ca || '—' }}</code></td>
               <td>{{ formatarData(item.validade) }}</td>
+              <td>
+                <span v-if="!item.validade_epi" class="badge-na">N/A</span>
+                <span v-else :class="['badge', isVencido(item.validade_epi) ? 'badge-vencido' : 'badge-ok']">
+                  {{ formatarData(item.validade_epi) }}
+                </span>
+              </td>
               <td>
                 <span :class="['badge', isVencido(item.validade) ? 'badge-vencido' : 'badge-ok']">
                   <i :class="isVencido(item.validade) ? 'fas fa-times-circle' : 'fas fa-check-circle'"></i>
@@ -92,7 +110,7 @@
               </td>
             </tr>
             <tr v-if="episFiltrados.length === 0">
-              <td colspan="5" class="empty">
+              <td colspan="6" class="empty">
                 <i class="fas fa-hard-hat" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#cbd5e1"></i>
                 {{ busca ? 'Nenhum EPI encontrado para "' + busca + '"' : 'Nenhum EPI cadastrado' }}
               </td>
@@ -116,7 +134,7 @@ const busca = ref('')
 const loading = ref(true)
 const msg = ref(null)
 
-const form = reactive({ nome: '', ca: '', validade: '' })
+const form = reactive({ nome: '', ca: '', validade: '', tem_validade_epi: false, validade_epi: '' })
 
 const episFiltrados = computed(() => {
   if (!busca.value) return epi.value
@@ -137,9 +155,15 @@ const carregar = async () => {
 }
 
 const salvar = async () => {
+  const payload = {
+    nome: form.nome,
+    ca: form.ca,
+    validade: form.validade,
+    validade_epi: form.tem_validade_epi ? form.validade_epi : null
+  }
   const { error } = editandoId.value
-    ? await supabase.from('epi').update({ ...form }).eq('id', editandoId.value)
-    : await supabase.from('epi').insert([{ ...form }])
+    ? await supabase.from('epi').update(payload).eq('id', editandoId.value)
+    : await supabase.from('epi').insert([payload])
 
   if (error) { showMsg('Erro ao salvar: ' + error.message, 'err'); return }
   showMsg(editandoId.value ? 'EPI atualizado!' : 'EPI cadastrado!')
@@ -149,7 +173,13 @@ const salvar = async () => {
 
 const prepararEdicao = (e) => {
   editandoId.value = e.id
-  Object.assign(form, { nome: e.nome, ca: e.ca, validade: e.validade })
+  Object.assign(form, {
+    nome: e.nome,
+    ca: e.ca,
+    validade: e.validade,
+    tem_validade_epi: !!e.validade_epi,
+    validade_epi: e.validade_epi || ''
+  })
 }
 
 const excluir = async (id) => {
@@ -161,7 +191,7 @@ const excluir = async (id) => {
 
 const cancelarEdicao = () => {
   editandoId.value = null
-  Object.assign(form, { nome: '', ca: '', validade: '' })
+  Object.assign(form, { nome: '', ca: '', validade: '', tem_validade_epi: false, validade_epi: '' })
 }
 
 const isVencido = (v) => v ? new Date(v) < new Date() : false
@@ -181,5 +211,10 @@ onMounted(carregar)
   background: #f1f5f9; color: #475569;
   padding: .15rem .45rem; border-radius: 4px;
   font-size: .78rem; font-family: monospace;
+}
+.badge-na {
+  background: #f1f5f9; color: #64748b;
+  padding: .15rem .55rem; border-radius: 12px;
+  font-size: .75rem; font-weight: 600;
 }
 </style>

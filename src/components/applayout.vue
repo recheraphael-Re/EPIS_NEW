@@ -7,17 +7,17 @@
       </div>
 
       <nav class="nav">
-        <RouterLink to="/applayout/dashboard" class="nav-item" active-class="active">
-          <i class="fas fa-chart-pie"></i>
-          <span>Dashboard</span>
+        <RouterLink to="/applayout/epi" class="nav-item" active-class="active">
+          <i class="fas fa-hard-hat"></i>
+          <span>Cadastro EPI</span>
         </RouterLink>
         <RouterLink to="/applayout/funcionario" class="nav-item" active-class="active">
           <i class="fas fa-users"></i>
           <span>Funcionários</span>
         </RouterLink>
-        <RouterLink to="/applayout/epi" class="nav-item" active-class="active">
-          <i class="fas fa-hard-hat"></i>
-          <span>Cadastro EPI</span>
+        <RouterLink to="/applayout/setor" class="nav-item" active-class="active">
+          <i class="fas fa-sitemap"></i>
+          <span>Setores</span>
         </RouterLink>
         <RouterLink to="/applayout/estoque" class="nav-item" active-class="active">
           <i class="fas fa-boxes"></i>
@@ -27,9 +27,9 @@
           <i class="fas fa-box-open"></i>
           <span>Entregas</span>
         </RouterLink>
-        <RouterLink to="/applayout/setor" class="nav-item" active-class="active">
-          <i class="fas fa-sitemap"></i>
-          <span>Setores</span>
+        <RouterLink to="/applayout/dashboard" class="nav-item" active-class="active">
+          <i class="fas fa-chart-pie"></i>
+          <span>Dashboard</span>
         </RouterLink>
         <RouterLink to="/applayout/relatorio" class="nav-item" active-class="active">
           <i class="fas fa-file-alt"></i>

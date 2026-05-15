@@ -10,14 +10,17 @@
     <!-- FORM -->
     <div class="card">
       <div class="card-header">
-        <h2><i class="fas fa-plus-circle"></i> Novo Setor</h2>
+        <h2>
+          <i :class="editandoId ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+          {{ editandoId ? 'Editar Setor' : 'Novo Setor' }}
+        </h2>
       </div>
       <div class="card-body">
         <div v-if="msg" :class="['alert', msg.tipo === 'ok' ? 'alert-success' : 'alert-error']">
           <i :class="msg.tipo === 'ok' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
           {{ msg.texto }}
         </div>
-        <form @submit.prevent="adicionarSetor">
+        <form @submit.prevent="salvar">
           <div class="form-grid">
             <div class="field">
               <label>Nome do Setor</label>
@@ -28,9 +31,15 @@
               <input v-model="novoSetor.descricao" type="text" placeholder="Ex: Equipe de manutenção de máquinas" />
             </div>
           </div>
-          <button type="submit" class="btn-primary">
-            <i class="fas fa-plus"></i> Adicionar Setor
-          </button>
+          <div style="display:flex;gap:.75rem">
+            <button type="submit" class="btn-primary">
+              <i :class="editandoId ? 'fas fa-save' : 'fas fa-plus'"></i>
+              {{ editandoId ? 'Salvar Alterações' : 'Adicionar Setor' }}
+            </button>
+            <button v-if="editandoId" type="button" class="btn-outline" @click="cancelarEdicao">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -64,9 +73,14 @@
               </td>
               <td class="descricao">{{ s.descricao || '—' }}</td>
               <td>
-                <button class="btn-sm btn-del" @click="remover(s.id)">
-                  <i class="fas fa-trash"></i> Excluir
-                </button>
+                <div class="btn-actions">
+                  <button class="btn-sm btn-edit" @click="prepararEdicao(s)">
+                    <i class="fas fa-pen"></i> Editar
+                  </button>
+                  <button class="btn-sm btn-del" @click="remover(s.id)">
+                    <i class="fas fa-trash"></i> Excluir
+                  </button>
+                </div>
               </td>
             </tr>
             <tr v-if="setoresFiltrados.length === 0">
@@ -92,6 +106,7 @@ const setores = ref([])
 const busca = ref('')
 const loading = ref(true)
 const msg = ref(null)
+const editandoId = ref(null)
 const novoSetor = reactive({ nome: '', descricao: '' })
 
 const setoresFiltrados = computed(() => {
@@ -112,13 +127,25 @@ const carregar = async () => {
   loading.value = false
 }
 
-async function adicionarSetor() {
+async function salvar() {
   if (!novoSetor.nome) return
-  const { error } = await supabase.from('setores').insert([{ ...novoSetor }])
-  if (error) { showMsg('Erro ao adicionar: ' + error.message, 'err'); return }
-  showMsg('Setor adicionado!')
-  Object.assign(novoSetor, { nome: '', descricao: '' })
+  const { error } = editandoId.value
+    ? await supabase.from('setores').update({ ...novoSetor }).eq('id', editandoId.value)
+    : await supabase.from('setores').insert([{ ...novoSetor }])
+  if (error) { showMsg('Erro ao salvar: ' + error.message, 'err'); return }
+  showMsg(editandoId.value ? 'Setor atualizado!' : 'Setor adicionado!')
+  cancelarEdicao()
   carregar()
+}
+
+function prepararEdicao(s) {
+  editandoId.value = s.id
+  Object.assign(novoSetor, { nome: s.nome, descricao: s.descricao || '' })
+}
+
+function cancelarEdicao() {
+  editandoId.value = null
+  Object.assign(novoSetor, { nome: '', descricao: '' })
 }
 
 async function remover(id) {
