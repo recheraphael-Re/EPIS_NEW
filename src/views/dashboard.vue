@@ -5,14 +5,20 @@
         <h1>Dashboard</h1>
         <p>Visão geral do sistema de gestão de EPIs</p>
       </div>
-      <div class="periodo-filtro">
-        <label>Período:</label>
-        <select v-model="periodoSelecionado" @change="carregar">
-          <option value="30">Últimos 30 dias</option>
-          <option value="90">Últimos 90 dias</option>
-          <option value="365">Último ano</option>
-          <option value="all">Tudo</option>
-        </select>
+      <div class="header-actions">
+        <a href="/apresentacao-cliente.html" target="_blank" rel="noopener" class="btn-pdf-comercial">
+          <i class="fas fa-file-pdf"></i>
+          PDF Comercial
+        </a>
+        <div class="periodo-filtro">
+          <label>Período:</label>
+          <select v-model="periodoSelecionado" @change="carregar">
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+            <option value="365">Último ano</option>
+            <option value="all">Tudo</option>
+          </select>
+        </div>
       </div>
     </header>
 
@@ -436,6 +442,35 @@ onMounted(carregar)
   font-size: .85rem;
   cursor: pointer;
 }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-pdf-comercial {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: linear-gradient(135deg, #f97316 0%, #c2570b 100%);
+  color: #fff;
+  padding: .55rem 1.1rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.3);
+  transition: transform .12s, box-shadow .15s, filter .15s;
+}
+.btn-pdf-comercial:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.4);
+  filter: brightness(1.05);
+}
+.btn-pdf-comercial:active { transform: translateY(0); }
+.btn-pdf-comercial i { font-size: .95rem; }
 
 /* Alerts */
 .alerts-grid {
