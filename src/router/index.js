@@ -9,6 +9,8 @@ import dashboard from '../views/dashboard.vue'
 import setor from '../views/setor.vue'
 import applayout from '../components/applayout.vue'
 import relatorio from '../views/relatorio.vue'
+import Menu from '../components/Menu.vue'
+import Footer from '../components/Footer.vue'
 import { useSupabase } from '../composables/useSupabase'
 
 const routes = [
