@@ -139,8 +139,8 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import Menu from '../components/Menu.vue'
-import Footer from '../components/Footer.vue'
+import Menu from '../components/menu.vue'
+import Footer from '../components/footer.vue'
 import { useSupabase } from '../composables/useSupabase'
 
 const { supabase } = useSupabase()
