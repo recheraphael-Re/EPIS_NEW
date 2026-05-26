@@ -10,7 +10,7 @@ import setor from '../views/setor.vue'
 import applayout from '../components/applayout.vue'
 import relatorio from '../views/relatorio.vue'
 import menu from '../components/menu.vue'
-import Footer from '../components/footer.vue'
+import footer from '../components/footer.vue'
 import { useSupabase } from '../composables/useSupabase'
 
 const routes = [
