@@ -1,12 +1,27 @@
 <template>
   <div class="shell">
-    <aside class="sidebar">
+    <!-- Botão hambúrguer (só aparece no mobile) -->
+    <button class="hamburger" @click="menuAberto = true" aria-label="Abrir menu">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Fundo escurecido ao abrir o menu no mobile -->
+    <div
+      v-if="menuAberto"
+      class="overlay"
+      @click="menuAberto = false"
+    ></div>
+
+    <aside class="sidebar" :class="{ aberto: menuAberto }">
       <div class="brand">
         <i class="fas fa-shield-alt"></i>
         <span>SafeEPI</span>
+        <button class="fechar" @click="menuAberto = false" aria-label="Fechar menu">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
 
-      <nav class="nav">
+      <nav class="nav" @click="menuAberto = false">
         <RouterLink to="/applayout/epi" class="nav-item" active-class="active">
           <i class="fas fa-hard-hat"></i>
           <span>Cadastro EPI</span>
@@ -50,12 +65,15 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { useSupabase } from '../composables/useSupabase'
 import { useRouter } from 'vue-router'
 
 const { supabase } = useSupabase()
 const router = useRouter()
+
+const menuAberto = ref(false)
 
 async function sair() {
   await supabase.auth.signOut()
@@ -96,6 +114,17 @@ async function sair() {
 }
 
 .brand i { color: #f97316; font-size: 1.25rem; }
+
+/* Botão de fechar dentro da sidebar — só no mobile */
+.fechar {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: none;
+}
 
 .nav {
   display: flex;
@@ -156,5 +185,52 @@ async function sair() {
   overflow-y: auto;
   min-height: 100vh;
   background: #f1f5f9;
+}
+
+/* Hambúrguer e overlay ficam escondidos no desktop */
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 90;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+
+/* ===== Tablet / Mobile ===== */
+@media (max-width: 768px) {
+  .hamburger { display: flex; align-items: center; justify-content: center; }
+  .overlay { display: block; }
+  .fechar { display: block; }
+
+  /* Sidebar vira gaveta deslizante, escondida por padrão */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.3);
+  }
+  .sidebar.aberto { transform: translateX(0); }
+
+  /* Conteúdo ocupa toda a largura */
+  .content {
+    margin-left: 0;
+    /* espaço para não ficar embaixo do botão hambúrguer */
+    padding-top: 3.5rem;
+  }
 }
 </style>

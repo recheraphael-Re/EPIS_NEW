@@ -19,7 +19,7 @@
         </div>
 
         <form @submit.prevent="registrarEntrega">
-          <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 1.25rem">
+          <div class="form-grid form-grid--2col" style="margin-bottom: 1.25rem">
             <div class="field">
               <label>Funcionário</label>
               <select v-model="form.funcionario_id" required>
@@ -419,6 +419,9 @@ onMounted(carregar)
 </script>
 
 <style scoped>
+/* ── Grid de 2 colunas que colapsa no mobile ── */
+.form-grid--2col { grid-template-columns: 1fr 1fr; }
+
 /* ── Cabeçalho da seleção de EPIs ── */
 .epi-select-header {
   display: flex;
@@ -557,4 +560,17 @@ onMounted(carregar)
 .text-center { text-align: center; }
 .badge-ok   { background: #dcfce7; color: #166534; }
 .badge-warn { background: #fee2e2; color: #991b1b; }
+
+/* ===== Mobile ===== */
+@media (max-width: 600px) {
+  .form-grid--2col { grid-template-columns: 1fr; }
+
+  /* O item de EPI quebra em várias linhas para não estourar a largura */
+  .epi-item { flex-wrap: wrap; }
+  .epi-nome { flex: 1 1 100%; }
+
+  .form-actions { flex-direction: column; align-items: stretch; }
+  .form-actions .btn-primary,
+  .form-actions .btn-outline { justify-content: center; }
+}
 </style>

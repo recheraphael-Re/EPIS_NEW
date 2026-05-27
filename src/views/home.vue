@@ -412,4 +412,31 @@ onMounted(async () => {
   color: #555;
   line-height: 1.55;
 }
+
+/* ===== Tablet ===== */
+@media (max-width: 860px) {
+  .home__hero {
+    flex-direction: column;
+    text-align: center;
+  }
+  .home__hero-imagem { max-width: 360px; width: 100%; }
+  .home__hero-actions { justify-content: center; }
+  .home__cards,
+  .beneficios-grid,
+  .home__passos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ===== Celular ===== */
+@media (max-width: 520px) {
+  .home { padding: 1.25rem; }
+  .home__hero-texto h1 { font-size: 26px; }
+  .beneficios-grid,
+  .home__passos {
+    grid-template-columns: 1fr;
+  }
+  .home__hero-actions { flex-direction: column; }
+  .btn-cta, .btn-cta-outline { justify-content: center; }
+}
 </style>
