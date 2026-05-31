@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SafeEPI — Documentação de Funcionalidades</title>
+<style>
+  body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; color: #1a1a1a; line-height: 1.5; }
+  h1 { color: #1E3A5F; font-size: 28pt; margin-bottom: 0; }
+  h2 { color: #1E3A5F; font-size: 17pt; border-bottom: 2px solid #f97316; padding-bottom: 3px; margin-top: 26px; }
+  h3 { color: #c2570b; font-size: 13pt; margin-top: 18px; }
+  .sub { color: #475569; font-size: 12pt; margin-top: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #1E3A5F; color: #fff; }
+  code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-family: Consolas, monospace; font-size: 10pt; }
+  ul { margin: 6px 0; }
+  .tag { background: #fff7ed; color: #c2570b; border: 1px solid #fed7aa; border-radius: 4px; padding: 0 5px; font-size: 9pt; font-weight: bold; }
+  .nota { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 8px 12px; margin: 10px 0; }
+</style>
+</head>
+<body>
+
+<h1>SafeEPI</h1>
+<p class="sub">Sistema de Gestão de Equipamentos de Proteção Individual (EPIs)<br>
+Documentação de Funcionalidades — material de estudo e apresentação</p>
+
+<h2>1. Visão geral</h2>
+<p>O SafeEPI é uma aplicação web para o controle completo de Equipamentos de Proteção Individual.
+Permite cadastrar EPIs e funcionários, controlar o estoque, registrar entregas e devoluções,
+acompanhar a validade dos equipamentos e gerar relatórios — tudo com controle de acesso por perfil
+e um painel (dashboard) com indicadores e alertas.</p>
+
+<h3>Tecnologias utilizadas</h3>
+<ul>
+  <li><strong>Front-end:</strong> Vue 3 (Composition API, <code>&lt;script setup&gt;</code>), Vue Router, Vite.</li>
+  <li><strong>Back-end / Banco:</strong> Supabase (PostgreSQL + Autenticação + Row Level Security).</li>
+  <li><strong>Gráficos:</strong> Chart.js (via vue-chartjs).</li>
+  <li><strong>Relatórios em PDF:</strong> jsPDF e jspdf-autotable.</li>
+</ul>
+
+<h3>Arquitetura</h3>
+<p>A aplicação é uma SPA (Single Page Application) em Vue que se comunica diretamente com o Supabase.
+A autenticação é feita pelo Supabase Auth (e-mail e senha). O acesso aos dados é protegido por
+<strong>políticas de RLS</strong> no próprio banco — ou seja, as regras de quem pode ler/escrever
+ficam no servidor, não apenas na tela.</p>
+
+<h2>2. Controle de acesso (perfis)</h2>
+<p>Cada usuário tem um <strong>papel (role)</strong>: <code>admin</code> ou <code>user</code>.
+O papel fica na tabela <code>perfis</code> e é criado automaticamente por um <em>trigger</em>
+quando um novo usuário se cadastra (padrão <code>user</code>). A promoção a administrador é feita pelo banco.</p>
+
+<table>
+  <tr><th>Tela</th><th>Administrador</th><th>Usuário comum</th></tr>
+  <tr><td>Dashboard</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Entregas</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Devoluções</td><td>✔</td><td>✔</td></tr>
+  <tr><td>EPIs em Posse</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Relatórios</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Cadastro de EPIs</td><td>✔</td><td>—</td></tr>
+  <tr><td>Funcionários</td><td>✔</td><td>—</td></tr>
+  <tr><td>Setores</td><td>✔</td><td>—</td></tr>
+  <tr><td>Estoque</td><td>✔</td><td>—</td></tr>
+</table>
+<p>O bloqueio acontece em duas camadas: no <strong>front-end</strong> (o item some do menu e a rota
+redireciona) e no <strong>banco (RLS)</strong>, onde a escrita em EPIs, funcionários e setores exige
+ser administrador.</p>
+
+<h2>3. Funcionalidades por tela</h2>
+
+<h3>3.1. Login</h3>
+<ul>
+  <li>Autenticação por e-mail e senha (Supabase Auth).</li>
+  <li>Rotas internas protegidas: sem sessão válida, o usuário é enviado para o login.</li>
+</ul>
+
+<h3>3.2. Dashboard</h3>
+<ul>
+  <li><strong>Alertas acionáveis:</strong> estoque baixo ou zerado; CA vencendo em até 30 dias;
+      validade do EPI vencendo em até 30 dias; funcionários sem entrega há mais de 90 dias.</li>
+  <li><strong>KPIs (indicadores):</strong> saldo em estoque, EPIs em posse, EPIs com estoque baixo/zerado,
+      EPIs vencidos, total de funcionários e entregas no período.</li>
+  <li><strong>Gráficos:</strong> saúde do inventário (pizza), níveis críticos (barras) e entregas
+      ao longo dos últimos 6 meses (linha).</li>
+  <li><strong>Rankings:</strong> funcionários que mais receberam EPIs e EPIs mais entregues.</li>
+  <li><strong>Tabela de estoque por EPI</strong> (saldo e situação: OK / Baixo / Zerado) e
+      <strong>painel de devoluções</strong> (reutilizáveis × descartes + recentes).</li>
+  <li>Filtro de período (30/90/365 dias ou tudo) e botão <strong>PDF Comercial</strong>.</li>
+</ul>
+
+<h3>3.3. Cadastro de EPIs</h3>
+<ul>
+  <li>Cadastro com nome, número do <strong>CA</strong> e <strong>validade do CA</strong>.</li>
+  <li>Controle opcional da <strong>validade do próprio EPI</strong> (alguns EPIs têm prazo de uso).</li>
+  <li>Edição dos dados e busca por nome.</li>
+  <li><strong>Inativação (exclusão lógica):</strong> o EPI sai das listas e seleções, mas o histórico
+      é preservado; pode ser reativado. <span class="tag">novo</span></li>
+  <li>Indicação visual de status (válido / vencido).</li>
+</ul>
+
+<h3>3.4. Funcionários</h3>
+<ul>
+  <li>Cadastro com nome, matrícula (única), setor e cargo.</li>
+  <li>Edição com destaque visual do registro em edição e busca por nome/setor/matrícula.</li>
+  <li><strong>Inativação (exclusão lógica)</strong> com opção de reativar. <span class="tag">novo</span></li>
+</ul>
+
+<h3>3.5. Setores</h3>
+<ul>
+  <li>Cadastro e gestão dos setores da empresa (usados na organização dos funcionários).</li>
+</ul>
+
+<h3>3.6. Estoque</h3>
+<ul>
+  <li><strong>Movimentações:</strong> entrada, saída e <strong>baixa</strong> (perda, dano, descarte, etc.).</li>
+  <li><strong>Saldo por EPI</strong> calculado em tempo real: entradas − saídas − baixas.</li>
+  <li>Indicadores: total de entradas, saídas, baixas e saldo total.</li>
+  <li>Bloqueio de saída que deixaria o saldo negativo.</li>
+  <li><strong>Baixa protegida por senha:</strong> exige reconfirmar a senha do usuário, com registro
+      do motivo e do responsável (auditoria).</li>
+  <li>Histórico de movimentações com motivo, observação e responsável.</li>
+</ul>
+
+<h3>3.7. Entregas</h3>
+<ul>
+  <li>Registro de entrega de <strong>vários EPIs de uma vez</strong> para um funcionário.</li>
+  <li><strong>Assinatura digital</strong> obrigatória (confirmação de recebimento).</li>
+  <li>Validações: bloqueia EPI vencido e quantidade acima do saldo em estoque.</li>
+  <li><strong>Baixa automática no estoque</strong> a cada entrega.</li>
+  <li>Histórico agrupado por funcionário + data; ao excluir, o estoque é estornado.</li>
+</ul>
+
+<h3>3.8. Devoluções <span class="tag">novo</span></h3>
+<ul>
+  <li>Ao escolher o funcionário, o sistema mostra apenas os EPIs que ele tem <strong>em posse</strong>
+      (entregue − já devolvido), com o limite de quantidade.</li>
+  <li><strong>Condição reutilizável:</strong> o EPI <strong>volta ao estoque automaticamente</strong> (entrada).</li>
+  <li><strong>Condição descarte:</strong> a devolução é registrada, mas o item não retorna ao estoque.</li>
+  <li>Histórico com responsável; ao excluir uma devolução reutilizável, a reposição é estornada.</li>
+</ul>
+
+<h3>3.9. EPIs em Posse <span class="tag">novo</span></h3>
+<ul>
+  <li>Mostra, por funcionário, <strong>quais EPIs e quantidades ele possui no momento</strong>
+      (entregue − devolvido).</li>
+  <li>Busca por funcionário/setor/matrícula e indicadores de total.</li>
+  <li>Exportação em <strong>PDF</strong> e impressão.</li>
+</ul>
+
+<h3>3.10. Relatórios</h3>
+<ul>
+  <li>Histórico de entregas com filtros por período, funcionário, EPI e CA.</li>
+  <li>Exibe validade do CA e do EPI, quantidade e status da assinatura.</li>
+  <li><strong>Exportação em PDF</strong> (com logo e cabeçalho) e <strong>impressão</strong> formatada.</li>
+</ul>
+
+<h3>3.11. PDF Comercial</h3>
+<ul>
+  <li>Apresentação do sistema gerada na hora (jsPDF), com as funcionalidades e uma seção
+      <strong>"O SafeEPI em números"</strong> com dados ao vivo (EPIs, funcionários, saldo, posse,
+      entregas e devoluções).</li>
+  <li>Acessível pelo botão na barra lateral e na dashboard.</li>
+</ul>
+
+<h2>4. Modelo de dados (tabelas)</h2>
+
+<h3>epi</h3>
+<table>
+  <tr><th>Campo</th><th>Descrição</th></tr>
+  <tr><td><code>id</code></td><td>Identificador (UUID).</td></tr>
+  <tr><td><code>nome</code></td><td>Nome do EPI.</td></tr>
+  <tr><td><code>ca</code></td><td>Número do Certificado de Aprovação.</td></tr>
+  <tr><td><code>validade</code></td><td>Validade do CA.</td></tr>
+  <tr><td><code>validade_epi</code></td><td>Validade do próprio EPI (opcional).</td></tr>
+  <tr><td><code>ativo</code></td><td>Inativação lógica (true/false).</td></tr>
+</table>
+<p class="nota">Observação: existe uma coluna legada <code>quantidade</code> na tabela <code>epi</code>,
+mas o saldo real <strong>não</strong> vem dela — é sempre calculado pelas movimentações da tabela
+<code>estoque</code>.</p>
+
+<h3>funcionarios</h3>
+<table>
+  <tr><th>Campo</th><th>Descrição</th></tr>
+  <tr><td><code>id</code></td><td>Identificador (UUID).</td></tr>
+  <tr><td><code>nome</code></td><td>Nome do colaborador.</td></tr>
+  <tr><td><code>matricula</code></td><td>Matrícula (única).</td></tr>
+  <tr><td><code>setor</code> / <code>cargo</code></td><td>Setor e cargo.</td></tr>
+  <tr><td><code>ativo</code></td><td>Inativação lógica.</td></tr>
+</table>
+
+<h3>estoque (movimentações)</h3>
+<table>
+  <tr><th>Campo</th><th>Descrição</th></tr>
+  <tr><td><code>epi_id</code></td><td>EPI movimentado.</td></tr>
+  <tr><td><code>tipo</code></td><td><code>entrada</code>, <code>saida</code> ou <code>baixa</code>.</td></tr>
+  <tr><td><code>quantidade</code></td><td>Quantidade (sempre &gt; 0).</td></tr>
+  <tr><td><code>data</code></td><td>Data da movimentação.</td></tr>
+  <tr><td><code>motivo</code> / <code>observacao</code></td><td>Motivo (na baixa) e observação livre.</td></tr>
+  <tr><td><code>usuario_email</code></td><td>Responsável (registrado na baixa).</td></tr>
+</table>
+
+<h3>entregas</h3>
+<table>
+  <tr><th>Campo</th><th>Descrição</th></tr>
+  <tr><td><code>funcionario_id</code> / <code>epi_id</code></td><td>Quem recebeu e qual EPI.</td></tr>
+  <tr><td><code>quantidade_entregue</code></td><td>Quantidade entregue.</td></tr>
+  <tr><td><code>data</code></td><td>Data da entrega.</td></tr>
+  <tr><td><code>assinatura_digital</code></td><td>Confirmação de recebimento (true/false).</td></tr>
+</table>
+
+<h3>devolucoes <span class="tag">novo</span></h3>
+<table>
+  <tr><th>Campo</th><th>Descrição</th></tr>
+  <tr><td><code>funcionario_id</code> / <code>epi_id</code></td><td>Quem devolveu e qual EPI.</td></tr>
+  <tr><td><code>quantidade</code></td><td>Quantidade devolvida.</td></tr>
+  <tr><td><code>condicao</code></td><td><code>reutilizavel</code> (volta ao estoque) ou <code>descarte</code>.</td></tr>
+  <tr><td><code>data</code> / <code>observacao</code> / <code>usuario_email</code></td><td>Data, observação e responsável.</td></tr>
+</table>
+
+<h3>perfis</h3>
+<table>
+  <tr><th>Campo</th><th>Descrição</th></tr>
+  <tr><td><code>id</code></td><td>Mesmo id do usuário no Auth.</td></tr>
+  <tr><td><code>email</code></td><td>E-mail do usuário.</td></tr>
+  <tr><td><code>role</code></td><td><code>admin</code> ou <code>user</code>.</td></tr>
+</table>
+
+<h2>5. Regras de negócio importantes</h2>
+<ul>
+  <li><strong>Saldo de estoque</strong> = soma das entradas − saídas − baixas (por EPI).</li>
+  <li><strong>EPIs em posse</strong> = total entregue − total devolvido (por funcionário e por EPI).</li>
+  <li><strong>Entrega</strong> gera uma <em>saída</em> de estoque; <strong>devolução reutilizável</strong> gera uma <em>entrada</em>.</li>
+  <li><strong>Estoque baixo</strong>: saldo ≤ 5 unidades; <strong>zerado</strong>: saldo ≤ 0.</li>
+  <li><strong>Validade</strong>: EPI com CA ou validade própria vencidos não pode ser entregue.</li>
+  <li><strong>Inativação</strong> não apaga dados — preserva todo o histórico.</li>
+</ul>
+
+<h2>6. Requisitos atendidos</h2>
+<table>
+  <tr><th>Código</th><th>Requisito</th><th>Situação</th></tr>
+  <tr><td>RF01</td><td>Cadastro de EPIs</td><td>Atendido</td></tr>
+  <tr><td>RF02</td><td>Cadastro de funcionários</td><td>Atendido</td></tr>
+  <tr><td>RF03</td><td>Registro de entrega de EPIs</td><td>Atendido</td></tr>
+  <tr><td>RF04</td><td>Registro de devolução com atualização de estoque</td><td>Atendido</td></tr>
+  <tr><td>RF05</td><td>Histórico de movimentações</td><td>Atendido</td></tr>
+  <tr><td>RF06</td><td>Consulta de EPIs em posse de cada funcionário</td><td>Atendido</td></tr>
+  <tr><td>RF07</td><td>Alerta de estoque mínimo</td><td>Atendido</td></tr>
+  <tr><td>RF08</td><td>Relatórios de movimentação por período</td><td>Atendido</td></tr>
+  <tr><td>RF09</td><td>Relatório de EPIs em posse</td><td>Atendido</td></tr>
+  <tr><td>RF10</td><td>Atualização de cadastros</td><td>Atendido</td></tr>
+  <tr><td>RF11</td><td>Controle de acesso por login e senha</td><td>Atendido</td></tr>
+  <tr><td>RF12</td><td>Exclusão lógica (inativação)</td><td>Atendido</td></tr>
+</table>
+<p>Recursos extras já implementados: controle de validade de CA e do EPI, baixa com auditoria,
+assinatura digital na entrega, dashboard com indicadores e perfis de acesso (admin/usuário).</p>
+
+<h2>7. Segurança</h2>
+<ul>
+  <li><strong>Autenticação</strong> via Supabase Auth (e-mail/senha).</li>
+  <li><strong>RLS (Row Level Security)</strong> em todas as tabelas: leitura para usuários autenticados;
+      escrita em EPIs, funcionários e setores restrita a administradores.</li>
+  <li><strong>Função <code>is_admin()</code></strong> e <strong>trigger</strong> que cria o perfil
+      automaticamente no cadastro.</li>
+  <li><strong>Baixa de estoque</strong> exige reconfirmação de senha e registra o responsável.</li>
+</ul>
+
+<h2>8. Roteiro sugerido para apresentação</h2>
+<ol>
+  <li><strong>Login</strong> e explicação dos perfis (entrar como admin e como usuário comum).</li>
+  <li><strong>Dashboard</strong>: mostrar KPIs, alertas de estoque/validade e gráficos.</li>
+  <li><strong>Cadastro</strong>: criar um EPI e um funcionário.</li>
+  <li><strong>Estoque</strong>: dar entrada de algumas unidades.</li>
+  <li><strong>Entrega</strong>: entregar EPIs com assinatura e mostrar a baixa automática no estoque.</li>
+  <li><strong>EPIs em Posse</strong>: mostrar o que o funcionário está segurando.</li>
+  <li><strong>Devolução</strong>: devolver um EPI reutilizável e mostrar o estoque voltando.</li>
+  <li><strong>Relatórios e PDF</strong>: gerar um relatório e o PDF comercial.</li>
+  <li><strong>Inativação</strong>: inativar e reativar um cadastro, destacando a preservação do histórico.</li>
+</ol>
+
+</body>
+</html>

@@ -6,10 +6,10 @@
         <p>Visão geral do sistema de gestão de EPIs</p>
       </div>
       <div class="header-actions">
-        <a href="/apresentacao-cliente.html" target="_blank" rel="noopener" class="btn-pdf-comercial">
+        <button type="button" class="btn-pdf-comercial" @click="gerarPdfComercial">
           <i class="fas fa-file-pdf"></i>
           PDF Comercial
-        </a>
+        </button>
         <div class="periodo-filtro">
           <label>Período:</label>
           <select v-model="periodoSelecionado" @change="carregar">
@@ -23,7 +23,23 @@
     </header>
 
     <!-- ALERTAS ACIONÁVEIS -->
-    <div class="alerts-grid" v-if="!loading && (episVencendo.length > 0 || episVencendoProprio.length > 0 || funcionariosSemEntrega.length > 0)">
+    <div class="alerts-grid" v-if="!loading && (estoqueBaixoLista.length > 0 || episVencendo.length > 0 || episVencendoProprio.length > 0 || funcionariosSemEntrega.length > 0)">
+      <RouterLink to="/applayout/estoque" class="alert-card alert-danger alert-link" v-if="estoqueBaixoLista.length > 0">
+        <div class="alert-head">
+          <i class="fas fa-box-open"></i>
+          <h3>Estoque baixo ou zerado ({{ estoqueBaixoLista.length }})</h3>
+        </div>
+        <ul class="alert-list">
+          <li v-for="e in estoqueBaixoLista.slice(0, 5)" :key="e.id">
+            <strong>{{ e.nome }}</strong>
+            <span class="alert-meta">{{ e.quantidade <= 0 ? 'esgotado' : e.quantidade + ' un. restantes' }}</span>
+          </li>
+          <li v-if="estoqueBaixoLista.length > 5" class="alert-more">
+            + {{ estoqueBaixoLista.length - 5 }} outro{{ estoqueBaixoLista.length - 5 > 1 ? 's' : '' }}
+          </li>
+        </ul>
+      </RouterLink>
+
       <div class="alert-card alert-warning" v-if="episVencendo.length > 0">
         <div class="alert-head">
           <i class="fas fa-exclamation-triangle"></i>
@@ -149,6 +165,59 @@
       </div>
     </div>
 
+    <!-- ESTOQUE POR EPI + DEVOLUÇÕES -->
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-warehouse"></i> Estoque por EPI</h2></div>
+        <div class="table-wrap">
+          <div v-if="loading" class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+          <table v-else class="table">
+            <thead>
+              <tr>
+                <th>EPI</th>
+                <th class="text-center">Saldo</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="i in estoqueOrdenado" :key="i.id" :class="{ 'row-baixo': i.quantidade <= ESTOQUE_MINIMO }">
+                <td style="font-weight:600;color:#0f172a">{{ i.nome }}</td>
+                <td class="text-center"><strong>{{ i.quantidade }}</strong> un.</td>
+                <td>
+                  <span :class="situacaoClasse(i.quantidade)">
+                    <i :class="i.quantidade <= 0 ? 'fas fa-times-circle' : i.quantidade <= ESTOQUE_MINIMO ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle'"></i>
+                    {{ situacaoTexto(i.quantidade) }}
+                  </span>
+                </td>
+              </tr>
+              <tr v-if="estoqueOrdenado.length === 0">
+                <td colspan="3" class="empty">Nenhuma movimentação de estoque</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-undo"></i> Devoluções</h2></div>
+        <div class="dev-summary">
+          <div class="dev-chip dev-reuse">
+            <i class="fas fa-recycle"></i> {{ devolucoesPorCondicao.reutilizavel }} reutilizáve{{ devolucoesPorCondicao.reutilizavel === 1 ? 'l' : 'is' }}
+          </div>
+          <div class="dev-chip dev-desc">
+            <i class="fas fa-trash-alt"></i> {{ devolucoesPorCondicao.descarte }} descarte{{ devolucoesPorCondicao.descarte === 1 ? '' : 's' }}
+          </div>
+        </div>
+        <div class="rank-list">
+          <div v-if="devolucoesRecentes.length === 0" class="empty">Nenhuma devolução registrada</div>
+          <div v-for="(d, i) in devolucoesRecentes" :key="i" class="rank-item">
+            <span class="rank-nome">{{ d.funcionarios?.nome ?? '—' }} · {{ d.epi?.nome ?? '—' }}</span>
+            <span class="rank-val">{{ d.quantidade }} un. — {{ formatarData(d.data) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ÚLTIMAS ENTREGAS -->
     <div class="card">
       <div class="card-header">
@@ -193,6 +262,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useSupabase } from '../composables/useSupabase'
+import { gerarPdfComercial } from '../utils/pdfComercial'
 import { Pie, Bar, Line } from 'vue-chartjs'
 import {
   Chart as ChartJS, Title, Tooltip, Legend, ArcElement,
@@ -205,6 +275,9 @@ const { supabase } = useSupabase()
 
 const periodoSelecionado = ref('90')
 
+// Nível a partir do qual o estoque é considerado "baixo" (mesma régua do estoque.vue)
+const ESTOQUE_MINIMO = 5
+
 const estoqueProcessado = ref([])
 const chartKey = ref(0)
 
@@ -212,6 +285,8 @@ const totalFuncionarios = ref(0)
 const totalEPIs = ref(0)
 const episVencidos = ref(0)
 const totalEntregas = ref(0)
+const saldoTotalEstoque = ref(0)
+const totalEmPosse = ref(0)
 const entregasRecentes = ref([])
 const episVencendo = ref([])
 const episVencendoProprio = ref([])
@@ -219,15 +294,33 @@ const funcionariosSemEntrega = ref([])
 const topFuncionarios = ref([])
 const topEpis = ref([])
 const entregasMensais = ref({ labels: [], datasets: [] })
+const devolucoesRecentes = ref([])
+const devolucoesPorCondicao = ref({ reutilizavel: 0, descarte: 0 })
 const loading = ref(true)
+
+// EPIs ordenados por saldo (menor primeiro) — para a tabela de estoque
+const estoqueOrdenado = computed(() =>
+  [...estoqueProcessado.value].sort((a, b) => a.quantidade - b.quantidade)
+)
+// EPIs no nível mínimo ou zerados — para o alerta acionável
+const estoqueBaixoLista = computed(() =>
+  estoqueOrdenado.value.filter(i => i.quantidade <= ESTOQUE_MINIMO)
+)
+
+function situacaoClasse(q) {
+  return ['badge', q <= 0 ? 'badge-vencido' : q <= ESTOQUE_MINIMO ? 'badge-baixo' : 'badge-ok']
+}
+function situacaoTexto(q) {
+  return q <= 0 ? 'Zerado' : q <= ESTOQUE_MINIMO ? 'Baixo' : 'OK'
+}
 
 const pieChartData = computed(() => {
   const d = estoqueProcessado.value
   return {
     labels: ['Estoque OK', 'Estoque Baixo', 'Esgotado'],
     datasets: [{ backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], data: [
-      d.filter(i => i.quantidade >= 10).length,
-      d.filter(i => i.quantidade < 10 && i.quantidade > 0).length,
+      d.filter(i => i.quantidade > ESTOQUE_MINIMO).length,
+      d.filter(i => i.quantidade > 0 && i.quantidade <= ESTOQUE_MINIMO).length,
       d.filter(i => i.quantidade <= 0).length
     ]}]
   }
@@ -249,10 +342,12 @@ const lineOptions = {
 }
 
 const stats = computed(() => [
-  { label: 'Funcionários',        value: totalFuncionarios.value, icon: 'fas fa-users',               color: '#3b82f6', bg: '#eff6ff', to: '/applayout/funcionario' },
-  { label: 'EPIs Cadastrados',    value: totalEPIs.value,         icon: 'fas fa-hard-hat',            color: '#22c55e', bg: '#f0fdf4', to: '/applayout/epi' },
-  { label: 'EPIs Vencidos',       value: episVencidos.value,      icon: 'fas fa-exclamation-triangle', color: '#ef4444', bg: '#fef2f2', to: '/applayout/epi' },
-  { label: 'Entregas Realizadas', value: totalEntregas.value,     icon: 'fas fa-box-open',            color: '#f97316', bg: '#fff7ed', to: '/applayout/entrega' }
+  { label: 'Saldo em Estoque (un.)', value: saldoTotalEstoque.value,         icon: 'fas fa-warehouse',           color: '#3b82f6', bg: '#eff6ff', to: '/applayout/estoque' },
+  { label: 'EPIs em Posse (un.)',    value: totalEmPosse.value,              icon: 'fas fa-people-carry',        color: '#8b5cf6', bg: '#f5f3ff', to: '/applayout/posse' },
+  { label: 'Estoque Baixo/Zerado',   value: estoqueBaixoLista.value.length,  icon: 'fas fa-box-open',            color: '#f59e0b', bg: '#fffbeb', to: '/applayout/estoque' },
+  { label: 'EPIs Vencidos',          value: episVencidos.value,              icon: 'fas fa-exclamation-triangle', color: '#ef4444', bg: '#fef2f2', to: '/applayout/epi' },
+  { label: 'Funcionários',           value: totalFuncionarios.value,         icon: 'fas fa-users',               color: '#22c55e', bg: '#f0fdf4', to: '/applayout/funcionario' },
+  { label: 'Entregas (período)',     value: totalEntregas.value,             icon: 'fas fa-box',                 color: '#f97316', bg: '#fff7ed', to: '/applayout/entrega' }
 ])
 
 function dataLimitePeriodo() {
@@ -285,13 +380,13 @@ const carregar = async () => {
     { data: vencendo },
     { data: vencendoProprio }
   ] = await Promise.all([
-    supabase.from('funcionarios').select('*', { count: 'exact', head: true }),
-    supabase.from('epi').select('*', { count: 'exact', head: true }),
-    supabase.from('epi').select('*', { count: 'exact', head: true }).lt('validade', hoje),
+    supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('ativo', true),
+    supabase.from('epi').select('*', { count: 'exact', head: true }).eq('ativo', true),
+    supabase.from('epi').select('*', { count: 'exact', head: true }).eq('ativo', true).lt('validade', hoje),
     queryEntregas,
     supabase.from('entregas').select('id, data, funcionarios(nome), epi(nome)').order('data', { ascending: false }).limit(5),
-    supabase.from('epi').select('id, nome, validade').gte('validade', hoje).lte('validade', dataLimite30).order('validade'),
-    supabase.from('epi').select('id, nome, validade_epi').not('validade_epi', 'is', null).gte('validade_epi', hoje).lte('validade_epi', dataLimite30).order('validade_epi')
+    supabase.from('epi').select('id, nome, validade').eq('ativo', true).gte('validade', hoje).lte('validade', dataLimite30).order('validade'),
+    supabase.from('epi').select('id, nome, validade_epi').eq('ativo', true).not('validade_epi', 'is', null).gte('validade_epi', hoje).lte('validade_epi', dataLimite30).order('validade_epi')
   ])
 
   totalFuncionarios.value = cf || 0
@@ -310,7 +405,7 @@ const carregar = async () => {
 
   const [{ data: detalhe }, { data: todosFuncs }] = await Promise.all([
     queryDetalhe,
-    supabase.from('funcionarios').select('id, nome')
+    supabase.from('funcionarios').select('id, nome').eq('ativo', true)
   ])
 
   // Top funcionários (por quantidade total no período)
@@ -392,23 +487,55 @@ const carregar = async () => {
     }]
   }
 
-  loading.value = false
+  // Inventário + posse + devoluções (independentes do filtro de período)
+  const [
+    { data: episData, error: erroEpi },
+    { data: movData, error: erroMov },
+    { data: entQty },
+    { data: devData }
+  ] = await Promise.all([
+    supabase.from('epi').select('id, nome').eq('ativo', true),
+    supabase.from('estoque').select('epi_id, tipo, quantidade'),
+    supabase.from('entregas').select('quantidade_entregue'),
+    supabase.from('devolucoes').select('quantidade, condicao, data, funcionarios(nome), epi(nome)').order('data', { ascending: false })
+  ])
 
-  // Inventário (independente do período)
-  const { data: episData, error: erroGrafico } = await supabase
-    .from('epi')
-    .select('id, nome, quantidade')
-
-  if (erroGrafico) {
-    console.error('Erro ao carregar gráficos:', erroGrafico.message)
+  if (erroEpi || erroMov) {
+    console.error('Erro ao carregar inventário:', (erroEpi || erroMov).message)
+    loading.value = false
     return
   }
 
+  // Soma as movimentações: entrada soma; saída e baixa subtraem (mesma regra do estoque.vue)
+  const saldoPorEpi = new Map()
+  let saldoTotal = 0
+  for (const mov of movData || []) {
+    const delta = mov.tipo === 'entrada' ? mov.quantidade : -mov.quantidade
+    saldoPorEpi.set(mov.epi_id, (saldoPorEpi.get(mov.epi_id) || 0) + delta)
+    saldoTotal += delta
+  }
+  saldoTotalEstoque.value = saldoTotal
+
   estoqueProcessado.value = (episData || []).map(item => ({
     ...item,
-    nome_epi: item.nome
+    nome_epi: item.nome,
+    quantidade: saldoPorEpi.get(item.id) || 0
   }))
   chartKey.value++
+
+  // EPIs em posse = total entregue − total devolvido (igual ao posse.vue)
+  const totalEntregue = (entQty || []).reduce((s, e) => s + (e.quantidade_entregue || 1), 0)
+  const totalDevolvido = (devData || []).reduce((s, d) => s + d.quantidade, 0)
+  totalEmPosse.value = totalEntregue - totalDevolvido
+
+  // Devoluções: recentes + contagem por condição
+  devolucoesRecentes.value = (devData || []).slice(0, 5)
+  devolucoesPorCondicao.value = {
+    reutilizavel: (devData || []).filter(d => d.condicao === 'reutilizavel').length,
+    descarte:     (devData || []).filter(d => d.condicao === 'descarte').length
+  }
+
+  loading.value = false
 }
 
 function formatarData(data) {
@@ -463,6 +590,9 @@ onMounted(carregar)
   text-decoration: none;
   box-shadow: 0 2px 6px rgba(249, 115, 22, 0.3);
   transition: transform .12s, box-shadow .15s, filter .15s;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 .btn-pdf-comercial:hover {
   transform: translateY(-1px);
@@ -490,6 +620,10 @@ onMounted(carregar)
 .alert-warning .alert-head i { color: #f59e0b; }
 .alert-info { border-left-color: #3b82f6; }
 .alert-info .alert-head i { color: #3b82f6; }
+.alert-danger { border-left-color: #ef4444; }
+.alert-danger .alert-head i { color: #ef4444; }
+.alert-link { text-decoration: none; color: inherit; display: block; transition: transform .12s, box-shadow .12s; }
+.alert-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .alert-head {
   display: flex; align-items: center; gap: .6rem;
   margin-bottom: .75rem;
@@ -592,4 +726,21 @@ onMounted(carregar)
   font-size: 0.75rem; font-weight: 700; flex-shrink: 0; text-transform: uppercase;
 }
 .empty { text-align: center; color: #94a3b8; padding: 1rem; font-size: .85rem; }
+
+/* Tabela de estoque + situação */
+.text-center { text-align: center; }
+.row-baixo { background: #fff7ed; }
+.badge-ok      { background: #dcfce7; color: #166534; }
+.badge-baixo   { background: #fff7ed; color: #9a3412; }
+.badge-vencido { background: #fee2e2; color: #991b1b; }
+
+/* Painel de devoluções */
+.dev-summary { display: flex; gap: .6rem; flex-wrap: wrap; padding: .25rem 1rem .75rem; }
+.dev-chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .3rem .7rem; border-radius: 20px;
+  font-size: .78rem; font-weight: 600;
+}
+.dev-reuse { background: #dcfce7; color: #166534; }
+.dev-desc  { background: #fef2f2; color: #991b1b; }
 </style>

@@ -71,10 +71,16 @@
     <!-- ── TABELA ── -->
     <div class="card">
       <div class="card-header">
-        <h2><i class="fas fa-list"></i> Colaboradores ({{ funcionarios.length }})</h2>
-        <div class="search-wrap">
-          <i class="fas fa-search"></i>
-          <input v-model="busca" type="text" placeholder="Buscar por nome, setor, matrícula..." />
+        <h2><i class="fas fa-list"></i> Colaboradores ({{ funcionariosFiltrados.length }})</h2>
+        <div class="header-tools">
+          <label class="toggle-inativos">
+            <input type="checkbox" v-model="mostrarInativos" />
+            <i class="fas fa-eye"></i> Mostrar inativos
+          </label>
+          <div class="search-wrap">
+            <i class="fas fa-search"></i>
+            <input v-model="busca" type="text" placeholder="Buscar por nome, setor, matrícula..." />
+          </div>
         </div>
       </div>
       <div class="table-wrap">
@@ -95,12 +101,13 @@
             <tr
               v-for="f in funcionariosFiltrados"
               :key="f.id"
-              :class="{ 'row-editando': f.id === editandoId }"
+              :class="{ 'row-editando': f.id === editandoId, 'row-inativo': f.ativo === false }"
             >
               <td>
                 <div class="nome-cell">
                   <span class="avatar">{{ f.nome?.charAt(0) }}</span>
                   <span class="nome-bold">{{ f.nome }}</span>
+                  <span v-if="f.ativo === false" class="badge badge-inativo">Inativo</span>
                 </div>
               </td>
               <td><code class="matricula">{{ f.matricula }}</code></td>
@@ -108,11 +115,16 @@
               <td>{{ f.cargo }}</td>
               <td>
                 <div class="btn-actions">
-                  <button class="btn-sm btn-edit" @click="prepararEdicao(f)">
-                    <i class="fas fa-pen"></i> Editar
-                  </button>
-                  <button class="btn-sm btn-del" @click="excluir(f.id)" :disabled="f.id === editandoId">
-                    <i class="fas fa-trash"></i> Excluir
+                  <template v-if="f.ativo !== false">
+                    <button class="btn-sm btn-edit" @click="prepararEdicao(f)">
+                      <i class="fas fa-pen"></i> Editar
+                    </button>
+                    <button class="btn-sm btn-del" @click="inativar(f)" :disabled="f.id === editandoId">
+                      <i class="fas fa-ban"></i> Inativar
+                    </button>
+                  </template>
+                  <button v-else class="btn-sm btn-reativar" @click="reativar(f)">
+                    <i class="fas fa-rotate-left"></i> Reativar
                   </button>
                 </div>
               </td>
@@ -140,6 +152,7 @@ const funcionarios  = ref([])
 const editandoId    = ref(null)
 const nomeEditando  = ref('')
 const busca         = ref('')
+const mostrarInativos = ref(false)
 const loading       = ref(true)
 const salvando      = ref(false)
 const msg           = ref(null)
@@ -148,9 +161,11 @@ const formEl        = ref(null)
 const form = reactive({ nome: '', matricula: '', setor: '', cargo: '' })
 
 const funcionariosFiltrados = computed(() => {
-  if (!busca.value) return funcionarios.value
+  let lista = funcionarios.value
+  if (!mostrarInativos.value) lista = lista.filter(f => f.ativo !== false)
+  if (!busca.value) return lista
   const q = busca.value.toLowerCase()
-  return funcionarios.value.filter(f =>
+  return lista.filter(f =>
     f.nome?.toLowerCase().includes(q) ||
     f.setor?.toLowerCase().includes(q) ||
     f.matricula?.toLowerCase().includes(q)
@@ -217,11 +232,17 @@ const prepararEdicao = (f) => {
   formEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const excluir = async (id) => {
-  if (!confirm('Deseja remover este funcionário?')) return
-  const { error } = await supabase.from('funcionarios').delete().eq('id', id)
-  if (error) showMsg('Erro ao excluir: ' + error.message, 'err')
-  else { showMsg('Funcionário removido.'); carregar() }
+const inativar = async (f) => {
+  if (!confirm(`Inativar o funcionário "${f.nome}"? Ele deixará de aparecer nas listas e seleções, mas o histórico de entregas será preservado.`)) return
+  const { error } = await supabase.from('funcionarios').update({ ativo: false }).eq('id', f.id)
+  if (error) showMsg('Erro ao inativar: ' + error.message, 'err')
+  else { showMsg(`Funcionário "${f.nome}" inativado.`); carregar() }
+}
+
+const reativar = async (f) => {
+  const { error } = await supabase.from('funcionarios').update({ ativo: true }).eq('id', f.id)
+  if (error) showMsg('Erro ao reativar: ' + error.message, 'err')
+  else { showMsg(`Funcionário "${f.nome}" reativado.`); carregar() }
 }
 
 onMounted(carregar)
@@ -302,4 +323,31 @@ onMounted(carregar)
 .row-editando { background: #fff7ed !important; }
 .row-editando td { border-left: 3px solid #f97316; }
 .row-editando:first-child td { border-left: 3px solid #f97316; }
+
+/* Ferramentas do cabeçalho (toggle + busca) */
+.header-tools { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.toggle-inativos {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .8rem; color: #475569; cursor: pointer; user-select: none;
+}
+.toggle-inativos input { accent-color: #f97316; cursor: pointer; }
+
+/* Funcionário inativo */
+.row-inativo { opacity: .6; }
+.badge-inativo {
+  background: #f1f5f9; color: #64748b;
+  padding: .1rem .5rem; border-radius: 12px;
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+/* Botão reativar */
+.btn-reativar {
+  background: #dcfce7; color: #166534; border: none;
+  padding: .35rem .7rem; border-radius: 6px;
+  font-size: .8rem; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-family: inherit; transition: background .15s;
+}
+.btn-reativar:hover { background: #bbf7d0; }
 </style>

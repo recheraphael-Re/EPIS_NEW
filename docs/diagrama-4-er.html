@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>body{background:#fff;margin:24px;font-family:Arial,Helvetica,sans-serif;}</style>
+</head>
+<body>
+<pre class="mermaid">
+erDiagram
+  PERFIS {
+    uuid id PK
+    text email
+    text role
+  }
+  FUNCIONARIOS {
+    uuid id PK
+    text nome
+    text matricula
+    text setor
+    text cargo
+    boolean ativo
+  }
+  SETORES {
+    uuid id PK
+    text nome
+    text descricao
+  }
+  EPI {
+    uuid id PK
+    text nome
+    text ca
+    date validade
+    date validade_epi
+    boolean ativo
+  }
+  ESTOQUE {
+    uuid id PK
+    uuid epi_id FK
+    text tipo
+    int quantidade
+    date data
+    text motivo
+    text usuario_email
+  }
+  ENTREGAS {
+    uuid id PK
+    uuid funcionario_id FK
+    uuid epi_id FK
+    int quantidade_entregue
+    boolean assinatura_digital
+    date data
+  }
+  DEVOLUCOES {
+    uuid id PK
+    uuid funcionario_id FK
+    uuid epi_id FK
+    int quantidade
+    text condicao
+    date data
+  }
+
+  FUNCIONARIOS ||--o{ ENTREGAS : recebe
+  FUNCIONARIOS ||--o{ DEVOLUCOES : devolve
+  EPI ||--o{ ENTREGAS : entregue_em
+  EPI ||--o{ DEVOLUCOES : devolvido_em
+  EPI ||--o{ ESTOQUE : movimenta
+</pre>
+<script>mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });</script>
+</body>
+</html>

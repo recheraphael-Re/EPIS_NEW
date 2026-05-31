@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>body{background:#fff;margin:24px;font-family:Arial,Helvetica,sans-serif;}</style>
+</head>
+<body>
+<pre class="mermaid">
+sequenceDiagram
+  actor U as Usuario
+  participant UI as Tela de Entregas
+  participant DB as Supabase (Banco)
+
+  U->>UI: Seleciona funcionario, EPIs, quantidades e assina
+  UI->>UI: Valida validade e saldo em estoque
+  UI->>DB: INSERT em entregas
+  DB-->>UI: OK
+  UI->>DB: INSERT em estoque (saida) por EPI
+  DB-->>UI: OK (estoque atualizado)
+  UI-->>U: Confirmacao "Entrega registrada"
+</pre>
+<script>mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });</script>
+</body>
+</html>

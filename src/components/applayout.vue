@@ -22,25 +22,33 @@
       </div>
 
       <nav class="nav" @click="menuAberto = false">
-        <RouterLink to="/applayout/epi" class="nav-item" active-class="active">
+        <RouterLink v-if="isAdmin" to="/applayout/epi" class="nav-item" active-class="active">
           <i class="fas fa-hard-hat"></i>
           <span>Cadastro EPI</span>
         </RouterLink>
-        <RouterLink to="/applayout/funcionario" class="nav-item" active-class="active">
+        <RouterLink v-if="isAdmin" to="/applayout/funcionario" class="nav-item" active-class="active">
           <i class="fas fa-users"></i>
           <span>Funcionários</span>
         </RouterLink>
-        <RouterLink to="/applayout/setor" class="nav-item" active-class="active">
+        <RouterLink v-if="isAdmin" to="/applayout/setor" class="nav-item" active-class="active">
           <i class="fas fa-sitemap"></i>
           <span>Setores</span>
         </RouterLink>
-        <RouterLink to="/applayout/estoque" class="nav-item" active-class="active">
+        <RouterLink v-if="isAdmin" to="/applayout/estoque" class="nav-item" active-class="active">
           <i class="fas fa-boxes"></i>
           <span>Estoque</span>
         </RouterLink>
         <RouterLink to="/applayout/entrega" class="nav-item" active-class="active">
           <i class="fas fa-box-open"></i>
           <span>Entregas</span>
+        </RouterLink>
+        <RouterLink to="/applayout/devolucao" class="nav-item" active-class="active">
+          <i class="fas fa-undo"></i>
+          <span>Devoluções</span>
+        </RouterLink>
+        <RouterLink to="/applayout/posse" class="nav-item" active-class="active">
+          <i class="fas fa-people-carry"></i>
+          <span>EPIs em Posse</span>
         </RouterLink>
         <RouterLink to="/applayout/dashboard" class="nav-item" active-class="active">
           <i class="fas fa-chart-pie"></i>
@@ -50,6 +58,10 @@
           <i class="fas fa-file-alt"></i>
           <span>Relatórios</span>
         </RouterLink>
+        <button type="button" class="nav-item nav-item-btn" @click="baixarPdfComercial">
+          <i class="fas fa-file-pdf"></i>
+          <span>PDF Comercial</span>
+        </button>
       </nav>
 
       <button @click="sair" class="btn-sair">
@@ -69,8 +81,9 @@ import { ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { useSupabase } from '../composables/useSupabase'
 import { useRouter } from 'vue-router'
+import { gerarPdfComercial } from '../utils/pdfComercial'
 
-const { supabase } = useSupabase()
+const { supabase, isAdmin } = useSupabase()
 const router = useRouter()
 
 const menuAberto = ref(false)
@@ -78,6 +91,11 @@ const menuAberto = ref(false)
 async function sair() {
   await supabase.auth.signOut()
   router.push('/login')
+}
+
+async function baixarPdfComercial() {
+  menuAberto.value = false
+  await gerarPdfComercial()
 }
 </script>
 
@@ -158,6 +176,16 @@ async function sair() {
 }
 
 .nav-item.active i { color: #fb923c; }
+
+/* Botão dentro do menu (PDF Comercial) — herda o visual de .nav-item */
+.nav-item-btn {
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
 
 .btn-sair {
   margin: 0.5rem 0.75rem 0;

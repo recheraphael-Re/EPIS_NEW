@@ -264,8 +264,8 @@ function limparForm() {
 const carregar = async () => {
   loading.value = true
   const [{ data: funcs }, { data: episData }, { data: entData, error }, { data: movData }] = await Promise.all([
-    supabase.from('funcionarios').select('id, nome').order('nome'),
-    supabase.from('epi').select('id, nome, ca, validade, validade_epi').order('nome'),
+    supabase.from('funcionarios').select('id, nome').eq('ativo', true).order('nome'),
+    supabase.from('epi').select('id, nome, ca, validade, validade_epi').eq('ativo', true).order('nome'),
     supabase
       .from('entregas')
       .select('id, data, funcionario_id, quantidade_entregue, assinatura_digital, funcionarios(id, nome), epi(id, nome)')

@@ -461,7 +461,7 @@ async function carregarUsuario() {
 const carregar = async () => {
   loading.value = true
   const [{ data: epiData }, { data: movData, error }] = await Promise.all([
-    supabase.from('epi').select('id, nome').order('nome'),
+    supabase.from('epi').select('id, nome').eq('ativo', true).order('nome'),
     supabase
       .from('estoque')
       .select('id, tipo, quantidade, data, observacao, motivo, usuario_email, epi_id, epi(id, nome)')

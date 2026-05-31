@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Atividade Prática — Sistema de Gestão de EPIs (SafeEPI)</title>
+<style>
+  body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; color: #1a1a1a; line-height: 1.5; }
+  h1 { color: #1E3A5F; font-size: 26pt; margin-bottom: 0; }
+  h2 { color: #1E3A5F; font-size: 16pt; border-bottom: 2px solid #f97316; padding-bottom: 3px; margin-top: 24px; }
+  h3 { color: #c2570b; font-size: 12.5pt; margin-top: 16px; }
+  .sub { color: #475569; font-size: 12pt; margin-top: 4px; }
+  .capa { color:#475569; font-size: 11pt; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #1E3A5F; color: #fff; }
+  code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-family: Consolas, monospace; font-size: 10pt; }
+  ul, ol { margin: 6px 0; }
+  pre.tree { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; font-family: Consolas, monospace; font-size:9.5pt; line-height:1.35; white-space:pre; }
+  img.diagrama { width:100%; max-width:730px; border:1px solid #e2e8f0; border-radius:6px; margin:8px 0; }
+  blockquote { border-left:4px solid #f97316; background:#fff7ed; margin:10px 0; padding:8px 14px; color:#7c2d12; }
+  .frase { border-left:4px solid #1E3A5F; background:#eff6ff; padding:10px 14px; font-weight:bold; color:#1e3a5f; }
+  .preencher { color:#94a3b8; font-style:italic; }
+  .campo { border-bottom:1px solid #94a3b8; display:inline-block; min-width:260px; }
+</style>
+</head>
+<body>
+
+<h1>Atividade Prática — Sistema de Gestão de EPIs</h1>
+<p class="sub">Planejamento, Análise e Design de Software — Solução: <strong>SafeEPI</strong></p>
+<p class="capa">SENAI SC — Joinville Sul · Engenharia de Software · Profª. Mestra Tatiana Aparecida de Almeida · Período: 2026</p>
+
+<h2>Etapa 1 — Planejamento</h2>
+
+<h3>4.1 Contextualização do Problema</h3>
+<p><strong>Situação atual:</strong> No SENAI SC Joinville Sul, o controle de EPIs é feito de forma manual,
+com planilhas de papel e registros avulsos. Cada entrega de equipamento a funcionários e visitantes é
+anotada à mão, sem um sistema central que relacione o equipamento, a pessoa, a data e o responsável.
+O estoque é conferido visualmente, sem atualização automática quando um EPI é entregue ou devolvido, e
+não há acompanhamento das validades (CA e do próprio equipamento).</p>
+<p><strong>Principais problemas identificados:</strong></p>
+<ul>
+  <li>Registros em papel sujeitos a perda, rasura e extravio.</li>
+  <li>Demora e dificuldade para localizar informações.</li>
+  <li>Falta de rastreabilidade: não se sabe quem está com cada EPI no momento.</li>
+  <li>Estoque sem controle em tempo real, gerando falta ou excesso de itens.</li>
+  <li>Risco de segurança por entrega de EPI vencido ou ausência de controle.</li>
+  <li>Reposição reativa, sem alerta de estoque mínimo.</li>
+  <li>Ausência de relatórios para decisão gerencial.</li>
+</ul>
+
+<h3>4.2 Definição do Problema</h3>
+<p class="frase">O controle manual de EPIs no SENAI Joinville Sul, baseado em planilhas de papel, impede a
+rastreabilidade de quem está com cada equipamento e o controle do estoque e das validades em tempo real,
+comprometendo a segurança dos usuários e a eficiência operacional.</p>
+
+<h3>4.3 Identificação dos Usuários</h3>
+<table>
+  <tr><th>Perfil</th><th>Papel no sistema</th></tr>
+  <tr><td>Administrador (almoxarife / gestor de segurança)</td><td>Cadastra EPIs, funcionários e setores; gerencia estoque (entradas/baixas); acessa tudo.</td></tr>
+  <tr><td>Usuário operacional</td><td>Registra entregas e devoluções, consulta EPIs em posse e gera relatórios.</td></tr>
+  <tr><td>Funcionário / Visitante</td><td>Recebe os EPIs e assina o recibo digital (não acessa o sistema diretamente).</td></tr>
+  <tr><td>Gestão / Coordenação</td><td>Consome dashboard e relatórios para decisão.</td></tr>
+</table>
+
+<h2>Etapa 2 — Análise de Requisitos</h2>
+
+<h3>5.1 Requisitos Funcionais</h3>
+<table>
+  <tr><th>Código</th><th>Descrição</th></tr>
+  <tr><td>RF01</td><td>O sistema deve permitir o cadastro de EPIs com nome, CA, validade do CA e validade do próprio equipamento.</td></tr>
+  <tr><td>RF02</td><td>O sistema deve permitir o cadastro de funcionários com nome, matrícula, setor e cargo.</td></tr>
+  <tr><td>RF03</td><td>O sistema deve registrar a entrega de EPIs a funcionários, com data, quantidade e assinatura digital, dando baixa automática no estoque.</td></tr>
+  <tr><td>RF04</td><td>O sistema deve registrar a devolução de EPIs, repondo o estoque automaticamente quando o item for reutilizável.</td></tr>
+  <tr><td>RF05</td><td>O sistema deve manter o histórico de movimentações de estoque (entradas, saídas e baixas).</td></tr>
+  <tr><td>RF06</td><td>O sistema deve informar quais EPIs cada funcionário possui no momento (entregue − devolvido).</td></tr>
+  <tr><td>RF07</td><td>O sistema deve emitir alertas de estoque baixo/zerado e de validades próximas do vencimento.</td></tr>
+  <tr><td>RF08</td><td>O sistema deve gerar relatórios de movimentação por período e exportá-los em PDF.</td></tr>
+  <tr><td>RF09</td><td>O sistema deve controlar o acesso por login/senha e por perfil (administrador/usuário).</td></tr>
+  <tr><td>RF10</td><td>O sistema deve permitir a inativação (exclusão lógica) de EPIs e funcionários, preservando o histórico.</td></tr>
+</table>
+
+<h3>5.2 Requisitos Não Funcionais</h3>
+<table>
+  <tr><th>Código</th><th>Descrição</th></tr>
+  <tr><td>RNF01</td><td>Segurança: proteger os dados com autenticação e políticas de acesso no banco (RLS), restringindo escrita a usuários autorizados.</td></tr>
+  <tr><td>RNF02</td><td>Usabilidade: interface responsiva (desktop e mobile) e intuitiva, com navegação por menu lateral.</td></tr>
+  <tr><td>RNF03</td><td>Desempenho: as consultas e telas devem carregar em poucos segundos sob uso normal.</td></tr>
+  <tr><td>RNF04</td><td>Disponibilidade: o sistema deve ser acessível via web (nuvem), com backend gerenciado (Supabase).</td></tr>
+  <tr><td>RNF05</td><td>Manutenibilidade: código modular (componentes/views) e banco versionado por migrações SQL.</td></tr>
+  <tr><td>RNF06</td><td>Auditoria: ações sensíveis (baixa de estoque) registram o responsável e exigem reconfirmação de senha.</td></tr>
+</table>
+
+<h3>5.3 Ideação (Brainstorming de Funcionalidades)</h3>
+<p>Login com perfis; cadastro de EPIs com validade CA/EPI; cadastro de funcionários e setores; controle de
+estoque (entrada/saída/baixa); baixa protegida por senha; entrega de múltiplos EPIs com assinatura digital;
+baixa automática de estoque na entrega; devolução com reposição (reutilizável/descarte); consulta de EPIs em
+posse por funcionário; alertas de validade e estoque mínimo; dashboard com KPIs e gráficos; rankings de
+funcionários/EPIs; relatórios com filtros e exportação em PDF; inativação lógica; controle de acesso
+admin/usuário; PDF comercial com números do sistema.</p>
+
+<h2>Etapa 3 — Design e Prototipação</h2>
+
+<h3>6.1 Prototipação de Telas</h3>
+<p><strong>Tela 1 — Login:</strong> fundo azul com gradiente, logo e nome "SafeEPI", subtítulo do sistema;
+card central com campos de e-mail e senha (com ícones), botão "Acessar Sistema" e mensagem de erro para
+credenciais inválidas. Layout responsivo.</p>
+<p><strong>Tela 2 — Cadastro de EPIs:</strong> formulário com nome do EPI, nº do CA, validade do CA e opção
+"tem validade própria?" (mostra campo de data condicional). Abaixo, tabela dos EPIs cadastrados com nome, CA,
+validades, status (válido/vencido) e ações (editar, inativar). Busca por nome e opção de mostrar inativos.</p>
+<p><strong>Tela 3 — Movimentação (Entrega/Devolução):</strong> na entrega, seleciona-se o funcionário e a
+data, marca-se vários EPIs numa lista (com saldo e status de validade), informa-se a quantidade e confirma-se
+a assinatura digital; o estoque baixa automaticamente. Na devolução, ao escolher o funcionário aparecem só os
+EPIs que ele tem em posse; escolhe-se o EPI, a quantidade e a condição (reutilizável → volta ao estoque; descarte).</p>
+<p><strong>Tela 4 — Consultas e Relatórios:</strong> filtros por período, funcionário, EPI e CA; tabela de
+resultados com validade, quantidade e assinatura; botões de imprimir e exportar PDF. O Dashboard complementa
+com KPIs (saldo, posse, vencidos), alertas, gráficos (pizza/barras/linha) e rankings.</p>
+<p class="preencher">[Anexar aqui os protótipos visuais — prints reais das telas do sistema rodando.]</p>
+
+<h3>6.2 Diagrama de Casos de Uso (UML)</h3>
+<img class="diagrama" src="diagrama-1-casos-de-uso.png" alt="Diagrama de Casos de Uso">
+
+<h3>6.3 Diagrama de Classes (UML)</h3>
+<img class="diagrama" src="diagrama-2-classes.png" alt="Diagrama de Classes">
+
+<h3>6.4 Diagrama de Sequência (UML) — Registrar Entrega</h3>
+<img class="diagrama" src="diagrama-3-sequencia.png" alt="Diagrama de Sequência">
+
+<h3>6.5 Diagrama Entidade-Relacionamento (BD)</h3>
+<img class="diagrama" src="diagrama-4-er.png" alt="Diagrama Entidade-Relacionamento">
+
+<h2>7. Validação — Feedback do Usuário</h2>
+<p><strong>Pontos positivos identificados (sugeridos — validar com um colega):</strong></p>
+<ul>
+  <li>Interface limpa e responsiva.</li>
+  <li>Baixa automática de estoque na entrega.</li>
+  <li>Alertas de validade e estoque no dashboard.</li>
+  <li>Rastreabilidade de quem está com cada EPI.</li>
+  <li>Exportação de relatórios em PDF.</li>
+</ul>
+<p><strong>Pontos de melhoria identificados (sugeridos):</strong></p>
+<ul>
+  <li>Estoque mínimo configurável por EPI (hoje é um limite fixo).</li>
+  <li>Cadastro de visitantes, além de funcionários.</li>
+  <li>Notificações por e-mail de vencimento.</li>
+  <li>Leitura por código de barras / QR Code.</li>
+</ul>
+
+<h2>11. Estrutura de Pastas do Projeto (VS Code)</h2>
+<pre class="tree">EPIS_NEW/
+├── docs/                       # Documentação gerada (PDF/Word/HTML)
+├── public/                     # Arquivos estáticos
+├── migracoes.sql               # Migrações do banco (Supabase)
+├── migracoes_02_inativacao.sql
+├── migracoes_03_devolucao.sql
+├── migracoes_04_perfis_rls.sql
+├── index.html
+├── package.json
+├── vite.config.js
+└── src/
+    ├── App.vue
+    ├── main.js
+    ├── assets/                 # Imagens e CSS (logoEPI.jpg, main.css)
+    ├── components/             # applayout.vue, menu.vue, footer.vue
+    ├── composables/            # useSupabase.js (cliente + sessão + papel)
+    ├── router/                 # index.js (rotas + proteção por perfil)
+    ├── utils/                  # pdfComercial.js
+    └── views/                  # Telas do sistema
+        ├── login.vue
+        ├── home.vue
+        ├── dashboard.vue
+        ├── epi.vue
+        ├── funcionario.vue
+        ├── setor.vue
+        ├── estoque.vue
+        ├── entrega.vue
+        ├── devolucao.vue
+        ├── posse.vue
+        └── relatorio.vue</pre>
+<p><strong>Stack:</strong> Vue 3 + Vite (front-end) · Supabase/PostgreSQL (back-end, autenticação e RLS) · Chart.js · jsPDF.</p>
+<p>
+  <strong>Repositório (GitHub):</strong> <span class="campo">&nbsp;</span> &nbsp; <span class="preencher">[cole o link aqui]</span><br>
+  <strong>Aplicação (Deploy):</strong> <span class="campo">&nbsp;</span> &nbsp; <span class="preencher">[cole o link aqui]</span>
+</p>
+
+<h2>18. Considerações Finais</h2>
+<blockquote>Esta atividade mostrou na prática como as etapas iniciais da Engenharia de Software —
+planejamento, análise e design — sustentam a implementação. Levantar os requisitos e prototipar antes de
+codificar evitou retrabalho e deixou claro o que o sistema precisava entregar. A maior dificuldade foi
+traduzir as regras de negócio (saldo de estoque, "EPIs em posse", devolução com reposição) em um modelo de
+dados coerente. Em um próximo projeto, eu investiria mais cedo nos diagramas UML e na validação com usuários
+antes de começar a programar.</blockquote>
+<p class="preencher">[Revise e reescreva com suas próprias palavras.]</p>
+
+<h2>19. Declaração de Autoria</h2>
+<p>Declaro que desenvolvi esta atividade de forma individual ou (grupo / projeto integrador) e autônoma,
+conforme as orientações da disciplina de Engenharia de Software, respeitando os princípios éticos e acadêmicos.</p>
+<p>
+  Nome completo: <span class="campo">&nbsp;</span><br><br>
+  Matrícula: <span class="campo" style="min-width:160px">&nbsp;</span> &nbsp;&nbsp;
+  Data: ____/____/______<br><br>
+  Assinatura: <span class="campo">&nbsp;</span>
+</p>
+
+</body>
+</html>

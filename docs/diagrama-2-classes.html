@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>body{background:#fff;margin:24px;font-family:Arial,Helvetica,sans-serif;}</style>
+</head>
+<body>
+<pre class="mermaid">
+classDiagram
+  class Perfil {
+    +UUID id
+    +String email
+    +String role
+  }
+  class Funcionario {
+    +UUID id
+    +String nome
+    +String matricula
+    +String setor
+    +String cargo
+    +Boolean ativo
+  }
+  class Setor {
+    +UUID id
+    +String nome
+    +String descricao
+  }
+  class EPI {
+    +UUID id
+    +String nome
+    +String ca
+    +Date validade
+    +Date validade_epi
+    +Boolean ativo
+  }
+  class MovimentacaoEstoque {
+    +UUID id
+    +String tipo
+    +int quantidade
+    +Date data
+    +String motivo
+    +String usuario_email
+  }
+  class Entrega {
+    +UUID id
+    +Date data
+    +int quantidade_entregue
+    +Boolean assinatura_digital
+  }
+  class Devolucao {
+    +UUID id
+    +int quantidade
+    +Date data
+    +String condicao
+  }
+
+  Funcionario "1" --> "0..*" Entrega
+  Funcionario "1" --> "0..*" Devolucao
+  EPI "1" --> "0..*" Entrega
+  EPI "1" --> "0..*" Devolucao
+  EPI "1" --> "0..*" MovimentacaoEstoque
+  Setor "1" --> "0..*" Funcionario
+</pre>
+<script>mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });</script>
+</body>
+</html>

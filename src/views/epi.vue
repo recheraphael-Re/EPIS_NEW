@@ -62,10 +62,16 @@
     <!-- TABELA -->
     <div class="card">
       <div class="card-header">
-        <h2><i class="fas fa-hard-hat"></i> EPIs Cadastrados ({{ epi.length }})</h2>
-        <div class="search-wrap">
-          <i class="fas fa-search"></i>
-          <input v-model="busca" type="text" placeholder="Buscar EPI..." />
+        <h2><i class="fas fa-hard-hat"></i> EPIs Cadastrados ({{ episFiltrados.length }})</h2>
+        <div class="header-tools">
+          <label class="toggle-inativos">
+            <input type="checkbox" v-model="mostrarInativos" />
+            <i class="fas fa-eye"></i> Mostrar inativos
+          </label>
+          <div class="search-wrap">
+            <i class="fas fa-search"></i>
+            <input v-model="busca" type="text" placeholder="Buscar EPI..." />
+          </div>
         </div>
       </div>
       <div class="table-wrap">
@@ -82,8 +88,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in episFiltrados" :key="item.id">
-              <td class="nome-epi">{{ item.nome }}</td>
+            <tr v-for="item in episFiltrados" :key="item.id" :class="{ 'row-inativo': item.ativo === false }">
+              <td class="nome-epi">
+                {{ item.nome }}
+                <span v-if="item.ativo === false" class="badge badge-inativo">Inativo</span>
+              </td>
               <td><code class="ca-code">{{ item.ca || '—' }}</code></td>
               <td>{{ formatarData(item.validade) }}</td>
               <td>
@@ -100,11 +109,16 @@
               </td>
               <td>
                 <div class="btn-actions">
-                  <button class="btn-sm btn-edit" @click="prepararEdicao(item)">
-                    <i class="fas fa-pen"></i> Editar
-                  </button>
-                  <button class="btn-sm btn-del" @click="excluir(item.id)">
-                    <i class="fas fa-trash"></i> Excluir
+                  <template v-if="item.ativo !== false">
+                    <button class="btn-sm btn-edit" @click="prepararEdicao(item)">
+                      <i class="fas fa-pen"></i> Editar
+                    </button>
+                    <button class="btn-sm btn-del" @click="inativar(item)">
+                      <i class="fas fa-ban"></i> Inativar
+                    </button>
+                  </template>
+                  <button v-else class="btn-sm btn-reativar" @click="reativar(item)">
+                    <i class="fas fa-rotate-left"></i> Reativar
                   </button>
                 </div>
               </td>
@@ -131,14 +145,17 @@ const { supabase } = useSupabase()
 const epi = ref([])
 const editandoId = ref(null)
 const busca = ref('')
+const mostrarInativos = ref(false)
 const loading = ref(true)
 const msg = ref(null)
 
 const form = reactive({ nome: '', ca: '', validade: '', tem_validade_epi: false, validade_epi: '' })
 
 const episFiltrados = computed(() => {
-  if (!busca.value) return epi.value
-  return epi.value.filter(e => e.nome?.toLowerCase().includes(busca.value.toLowerCase()))
+  let lista = epi.value
+  if (!mostrarInativos.value) lista = lista.filter(e => e.ativo !== false)
+  if (!busca.value) return lista
+  return lista.filter(e => e.nome?.toLowerCase().includes(busca.value.toLowerCase()))
 })
 
 function showMsg(texto, tipo = 'ok') {
@@ -182,11 +199,17 @@ const prepararEdicao = (e) => {
   })
 }
 
-const excluir = async (id) => {
-  if (!confirm('Deseja remover este EPI?')) return
-  const { error } = await supabase.from('epi').delete().eq('id', id)
-  if (error) showMsg('Erro ao excluir.', 'err')
-  else { showMsg('EPI removido.'); carregar() }
+const inativar = async (item) => {
+  if (!confirm(`Inativar o EPI "${item.nome}"? Ele deixará de aparecer nas listas e seleções, mas o histórico de movimentações será preservado.`)) return
+  const { error } = await supabase.from('epi').update({ ativo: false }).eq('id', item.id)
+  if (error) showMsg('Erro ao inativar.', 'err')
+  else { showMsg(`EPI "${item.nome}" inativado.`); carregar() }
+}
+
+const reativar = async (item) => {
+  const { error } = await supabase.from('epi').update({ ativo: true }).eq('id', item.id)
+  if (error) showMsg('Erro ao reativar.', 'err')
+  else { showMsg(`EPI "${item.nome}" reativado.`); carregar() }
 }
 
 const cancelarEdicao = () => {
@@ -217,4 +240,31 @@ onMounted(carregar)
   padding: .15rem .55rem; border-radius: 12px;
   font-size: .75rem; font-weight: 600;
 }
+
+/* Ferramentas do cabeçalho (toggle + busca) */
+.header-tools { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.toggle-inativos {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .8rem; color: #475569; cursor: pointer; user-select: none;
+}
+.toggle-inativos input { accent-color: #f97316; cursor: pointer; }
+
+/* EPI inativo */
+.row-inativo { opacity: .6; }
+.badge-inativo {
+  background: #f1f5f9; color: #64748b;
+  padding: .1rem .5rem; border-radius: 12px;
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .03em; margin-left: .4rem;
+}
+
+/* Botão reativar */
+.btn-reativar {
+  background: #dcfce7; color: #166534; border: none;
+  padding: .35rem .7rem; border-radius: 6px;
+  font-size: .8rem; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-family: inherit; transition: background .15s;
+}
+.btn-reativar:hover { background: #bbf7d0; }
 </style>
