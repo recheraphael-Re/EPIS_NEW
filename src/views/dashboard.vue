@@ -10,6 +10,18 @@
           <i class="fas fa-file-pdf"></i>
           PDF Comercial
         </button>
+        <button type="button" class="btn-diagrama" @click="abrirDiagrama('der')">
+          <i class="fas fa-project-diagram"></i>
+          DER
+        </button>
+        <button type="button" class="btn-diagrama" @click="abrirDiagrama('mer')">
+          <i class="fas fa-sitemap"></i>
+          MER
+        </button>
+        <button type="button" class="btn-diagrama" @click="abrirApresentacao">
+          <i class="fas fa-file-powerpoint"></i>
+          Apresentação
+        </button>
         <div class="periodo-filtro">
           <label>Período:</label>
           <select v-model="periodoSelecionado" @change="carregar">
@@ -270,6 +282,21 @@ import {
 } from 'chart.js'
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler)
+
+// Diagramas importados de docs/ (fonte única). O ?url faz o Vite servir em dev
+// e copiar para o build automaticamente — sem precisar duplicar em public/.
+import derUrl from '../../docs/diagrama-5-der.html?url'
+import merUrl from '../../docs/diagrama-6-mer-conceitual.html?url'
+
+// Abre a representação gráfica do modelo de dados em nova aba
+const abrirDiagrama = (tipo) => {
+  window.open(tipo === 'der' ? derUrl : merUrl, '_blank')
+}
+
+// Abre a apresentação comercial estática (PDF em public/) em nova aba
+const abrirApresentacao = () => {
+  window.open(`${import.meta.env.BASE_URL}apresentacao-cliente.pdf`, '_blank')
+}
 
 const { supabase } = useSupabase()
 
@@ -601,6 +628,29 @@ onMounted(carregar)
 }
 .btn-pdf-comercial:active { transform: translateY(0); }
 .btn-pdf-comercial i { font-size: .95rem; }
+
+.btn-diagrama {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: #fff;
+  color: #1e40af;
+  padding: .55rem 1.1rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 600;
+  border: 1px solid #bfdbfe;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .12s, box-shadow .15s, background .15s;
+}
+.btn-diagrama:hover {
+  transform: translateY(-1px);
+  background: #eff6ff;
+  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.15);
+}
+.btn-diagrama:active { transform: translateY(0); }
+.btn-diagrama i { font-size: .95rem; }
 
 /* Alerts */
 .alerts-grid {

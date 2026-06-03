@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SafeEPI - DER (Diagrama Entidade-Relacionamento)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body{background:#fff;margin:24px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;}
+  h1{font-size:1.3rem;margin-bottom:.2rem;}
+  p.legenda{color:#475569;font-size:.85rem;margin-top:0;}
+  .nota{background:#fff7ed;border-left:4px solid #f97316;padding:.6rem .9rem;
+        font-size:.82rem;color:#7c2d12;border-radius:4px;max-width:780px;margin-top:18px;}
+</style>
+</head>
+<body>
+<h1>SafeEPI &mdash; DER (Diagrama Entidade-Relacionamento)</h1>
+<p class="legenda">Modelo logico do banco (PostgreSQL/Supabase). PK = chave primaria, FK = chave estrangeira.</p>
+
+<pre class="mermaid">
+erDiagram
+    SETORES {
+        uuid id PK
+        text nome
+        text descricao
+        timestamptz created_at
+    }
+    FUNCIONARIOS {
+        uuid id PK
+        text nome
+        text matricula
+        text setor
+        text cargo
+        bool ativo
+        timestamptz created_at
+    }
+    EPI {
+        uuid id PK
+        text nome
+        text ca
+        date validade
+        date validade_epi
+        int quantidade
+        bool ativo
+        timestamptz created_at
+    }
+    ESTOQUE {
+        uuid id PK
+        uuid epi_id FK
+        text tipo
+        int quantidade
+        date data
+        text motivo
+        text observacao
+        text usuario_email
+        timestamptz created_at
+    }
+    ENTREGAS {
+        uuid id PK
+        uuid funcionario_id FK
+        uuid epi_id FK
+        int quantidade_entregue
+        date data
+        bool assinatura_digital
+        timestamptz created_at
+    }
+    DEVOLUCOES {
+        uuid id PK
+        uuid funcionario_id FK
+        uuid epi_id FK
+        int quantidade
+        text condicao
+        date data
+        text observacao
+        text usuario_email
+        timestamptz created_at
+    }
+    PERFIS {
+        uuid id PK
+        text email
+        text role
+        timestamptz created_at
+    }
+
+    FUNCIONARIOS ||--o{ ENTREGAS   : "recebe"
+    EPI          ||--o{ ENTREGAS   : "e entregue em"
+    FUNCIONARIOS ||--o{ DEVOLUCOES : "devolve"
+    EPI          ||--o{ DEVOLUCOES : "e devolvido em"
+    EPI          ||--o{ ESTOQUE    : "movimenta"
+    SETORES      ||..o{ FUNCIONARIOS : "agrupa (logico, por texto)"
+</pre>
+
+<div class="nota">
+  <strong>Nota de modelagem:</strong> em <code>funcionarios</code> o campo <code>setor</code> e
+  um <em>texto</em>, nao uma chave estrangeira para <code>setores</code>. Por isso a ligacao
+  SETORES &rarr; FUNCIONARIOS aparece tracejada (relacionamento apenas logico). Para tornar
+  esse vinculo real, troque por uma coluna <code>setor_id uuid</code> referenciando
+  <code>setores.id</code>. A tabela <code>perfis</code> referencia <code>auth.users</code>
+  (gerenciada pelo Supabase Auth) e cuida do controle de acesso admin/user.
+</div>
+
+<script>mermaid.initialize({ startOnLoad: true, securityLevel: 'loose', flowchart: { htmlLabels: false } });</script>
+</body>
+</html>

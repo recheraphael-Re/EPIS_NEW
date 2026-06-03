@@ -1,6 +1,9 @@
 import jsPDF from 'jspdf'
 import logoSafeEPI from '../assets/logoEPI.jpg'
 import { useSupabase } from '../composables/useSupabase'
+import { capturarDiagramaPng } from './diagramaImg'
+import derUrl from '../../docs/diagrama-5-der.html?url'
+import merUrl from '../../docs/diagrama-6-mer-conceitual.html?url'
 
 // Paleta da marca
 const NAVY = [30, 58, 95]
@@ -156,6 +159,23 @@ export async function gerarPdfComercial() {
     y += 2
   }
 
+  // Insere a legenda + imagem de um diagrama, ajustando à largura e paginando.
+  function adicionarDiagrama(legenda, png) {
+    let imgW = contentW
+    let imgH = imgW * (png.height / png.width)
+    const maxH = pageH - margin * 2 - 14   // altura máxima útil numa página
+    if (imgH > maxH) { imgH = maxH; imgW = imgH * (png.width / png.height) }
+    novaPaginaSePreciso(imgH + 12)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(...NAVY)
+    doc.text(legenda, margin, y)
+    y += 5
+    const x = margin + (contentW - imgW) / 2   // centraliza
+    doc.addImage(png.dataUrl, 'PNG', x, y, imgW, imgH)
+    y += imgH + 6
+  }
+
   function rodape() {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
@@ -224,6 +244,23 @@ export async function gerarPdfComercial() {
   paragrafo('• Apoio à conformidade legal, com histórico auditável e controle de validade dos equipamentos.')
   paragrafo('• Decisões mais rápidas a partir de alertas e indicadores no dashboard.')
   paragrafo('• Segurança da informação com acesso por perfil e dados protegidos por políticas no banco.')
+
+  // ── Modelo de Dados (DER e MER) ──
+  // Renderiza os diagramas Mermaid de docs/ e os embute como imagem.
+  // É opcional: se a renderização falhar (offline/CDN), o PDF sai sem esta seção.
+  try {
+    const [der, mer] = await Promise.all([
+      capturarDiagramaPng(derUrl),
+      capturarDiagramaPng(merUrl)
+    ])
+    tituloSecao('Modelo de Dados')
+    paragrafo(
+      'Estrutura do banco de dados que sustenta o SafeEPI, apresentada em dois níveis: ' +
+      'o DER (modelo lógico, com tabelas, chaves e relacionamentos) e o MER (modelo conceitual).'
+    )
+    adicionarDiagrama('DER — Diagrama Entidade-Relacionamento (lógico)', der)
+    adicionarDiagrama('MER — Modelo Entidade-Relacionamento (conceitual)', mer)
+  } catch (_) { /* diagramas opcionais — não bloqueiam o PDF */ }
 
   rodape()
   doc.save('safeepi-apresentacao-comercial.pdf')

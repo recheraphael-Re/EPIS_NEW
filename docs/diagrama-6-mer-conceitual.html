@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SafeEPI - MER Conceitual (modelo Chen)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body{background:#fff;margin:24px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;}
+  h1{font-size:1.3rem;margin-bottom:.2rem;}
+  p.legenda{color:#475569;font-size:.85rem;margin-top:0;}
+  .nota{background:#fff7ed;border-left:4px solid #f97316;padding:.6rem .9rem;
+        font-size:.82rem;color:#7c2d12;border-radius:4px;max-width:820px;margin-top:18px;}
+</style>
+</head>
+<body>
+<h1>SafeEPI &mdash; MER Conceitual (modelo Chen)</h1>
+<p class="legenda">
+  Retangulos = entidades &nbsp;|&nbsp; Losangos = relacionamentos &nbsp;|&nbsp;
+  pares <strong>(min,max)</strong> = cardinalidade. Atributos detalhados no DER
+  (<code>diagrama-5-der.html</code>).
+</p>
+
+<pre class="mermaid">
+flowchart TB
+  %% ===== ENTIDADES =====
+  FUNC[FUNCIONARIO]:::ent
+  EPI[EPI]:::ent
+  SETOR[SETOR]:::ent
+  EST[ESTOQUE]:::ent
+
+  %% ===== RELACIONAMENTOS (losangos) =====
+  R1{recebe}:::rel
+  R2{devolve}:::rel
+  R3{movimenta}:::rel
+  R4{pertence}:::rel
+
+  %% ===== LIGACOES COM CARDINALIDADE (notacao min,max - padrao BRModelo) =====
+  %% Le-se: o par (min,max) ao lado de cada entidade indica de quantas
+  %% ocorrencias do relacionamento aquela entidade participa.
+  FUNC ---|"(0,N)"| R1
+  R1 ---|"(0,N)"| EPI
+  FUNC ---|"(0,N)"| R2
+  R2 ---|"(0,N)"| EPI
+  EPI ---|"(0,N)"| R3
+  R3 ---|"(1,1)"| EST
+  SETOR -.-|"(0,N)"| R4
+  R4 -.-|"(1,1)"| FUNC
+
+  classDef ent fill:#dbeafe,stroke:#1e40af,stroke-width:2px,color:#0f172a;
+  classDef rel fill:#fef9c3,stroke:#a16207,color:#0f172a;
+</pre>
+
+<div class="nota">
+  <strong>Como ler a cardinalidade (min,max):</strong> o par ao lado de cada entidade indica
+  o minimo e o maximo de ocorrencias do relacionamento em que ela participa.
+  <ul style="margin:.4rem 0 0;padding-left:1.1rem;">
+    <li><strong>recebe / devolve</strong> &mdash; FUNCIONARIO (0,N) &harr; EPI (0,N): relacao
+      <strong>N:N</strong>. Um funcionario recebe varios EPIs e um EPI e entregue a varios funcionarios.
+      No DER cada uma vira uma <strong>entidade associativa</strong> (<code>ENTREGAS</code> e
+      <code>DEVOLUCOES</code>) com atributos proprios (data, quantidade, etc.).</li>
+    <li><strong>movimenta</strong> &mdash; EPI (0,N) &harr; ESTOQUE (1,1): relacao <strong>1:N</strong>.
+      Um EPI tem varias movimentacoes; cada movimentacao pertence a exatamente um EPI.</li>
+    <li><strong>pertence</strong> &mdash; SETOR (0,N) &harr; FUNCIONARIO (1,1): relacao <strong>1:N</strong>.
+      Um setor agrupa varios funcionarios; cada funcionario pertence a um setor. Aparece
+      tracejada porque hoje e apenas logica (campo texto <code>setor</code>), nao uma FK real.</li>
+  </ul>
+</div>
+
+<script>mermaid.initialize({ startOnLoad: true, securityLevel: 'loose', flowchart: { htmlLabels: false } });</script>
+</body>
+</html>
