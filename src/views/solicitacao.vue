@@ -90,6 +90,10 @@
               </td>
               <td v-if="isAdmin">
                 <div class="btn-actions" v-if="s.status === 'pendente'">
+                  <label class="assinatura-check" :class="{ marcado: assinaturas[s.id] }">
+                    <input type="checkbox" v-model="assinaturas[s.id]" />
+                    <i class="fas fa-signature"></i> Assinatura digital
+                  </label>
                   <button class="btn-sm btn-aprovar" @click="aprovar(s)" :disabled="processandoId === s.id">
                     <i class="fas fa-check"></i> Aprovar
                   </button>
@@ -132,6 +136,9 @@ const soPendentes = ref(false)
 const msg = ref(null)
 
 const form = reactive({ funcionario_id: '', epi_id: '', quantidade: 1, observacao: '' })
+
+// Confirmação de assinatura digital por solicitação (id -> bool), preenchido pelo admin ao aprovar
+const assinaturas = reactive({})
 
 function showMsg(texto, tipo = 'ok') {
   msg.value = { texto, tipo }
@@ -199,6 +206,9 @@ const aprovar = async (s) => {
   const epi = epis.value.find(e => e.id === s.epi?.id)
   const nomeFunc = s.funcionarios?.nome || 'funcionário'
 
+  if (!assinaturas[s.id]) {
+    showMsg('Marque "Assinatura digital" para confirmar a entrega antes de aprovar.', 'err'); return
+  }
   if (epi && estaVencido(epi)) {
     showMsg(`"${s.epi?.nome}" está vencido. Atualize o cadastro antes de aprovar.`, 'err'); return
   }
@@ -216,7 +226,7 @@ const aprovar = async (s) => {
     epi_id: s.epi?.id,
     data: hoje,
     quantidade_entregue: s.quantidade,
-    assinatura_digital: false
+    assinatura_digital: true
   }])
   if (errEnt) { processandoId.value = null; showMsg('Erro ao gerar entrega: ' + errEnt.message, 'err'); return }
 
@@ -238,6 +248,7 @@ const aprovar = async (s) => {
   if (errEst) showMsg('Entrega criada, mas falhou a baixa de estoque: ' + errEst.message, 'err')
   else if (errUpd) showMsg('Entrega criada, mas falhou ao atualizar o status: ' + errUpd.message, 'err')
   else showMsg(`Aprovada! Entrega de ${s.quantidade}x "${s.epi?.nome}" gerada e estoque baixado.`)
+  delete assinaturas[s.id]
   carregar()
 }
 
@@ -279,7 +290,14 @@ onMounted(carregar)
 .badge-pendente {
   background: #fef3c7; color: #92400e;
 }
-.btn-actions { display: flex; gap: .4rem; }
+.btn-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.assinatura-check {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .76rem; color: #64748b; cursor: pointer; user-select: none;
+  padding: .25rem .5rem; border: 1px dashed #cbd5e1; border-radius: 6px;
+}
+.assinatura-check input { accent-color: #16a34a; cursor: pointer; }
+.assinatura-check.marcado { color: #166534; border-color: #16a34a; background: #f0fdf4; }
 .btn-aprovar {
   background: #dcfce7; color: #166534; border: none;
   padding: .35rem .7rem; border-radius: 6px; font-size: .8rem; font-weight: 600;
