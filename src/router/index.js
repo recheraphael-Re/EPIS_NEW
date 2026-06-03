@@ -11,6 +11,7 @@ import applayout from '../components/applayout.vue'
 import relatorio from '../views/relatorio.vue'
 import posse from '../views/posse.vue'
 import devolucao from '../views/devolucao.vue'
+import solicitacao from '../views/solicitacao.vue'
 import menu from '../components/menu.vue'
 import footer from '../components/footer.vue'
 import { useSupabase } from '../composables/useSupabase'
@@ -26,6 +27,7 @@ const routes = [
       { path: 'estoque', component: estoque, meta: { role: 'admin' } },
       { path: 'dashboard', component: dashboard },
       { path: 'entrega', component: entrega },
+      { path: 'solicitacao', component: solicitacao },
       { path: 'devolucao', component: devolucao },
       { path: 'posse', component: posse },
       { path: 'funcionario', component: funcionario, meta: { role: 'admin' } },

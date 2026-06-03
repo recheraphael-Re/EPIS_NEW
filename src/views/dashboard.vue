@@ -35,7 +35,17 @@
     </header>
 
     <!-- ALERTAS ACIONÁVEIS -->
-    <div class="alerts-grid" v-if="!loading && (estoqueBaixoLista.length > 0 || episVencendo.length > 0 || episVencendoProprio.length > 0 || funcionariosSemEntrega.length > 0)">
+    <div class="alerts-grid" v-if="!loading && (estoqueBaixoLista.length > 0 || episVencendo.length > 0 || episVencendoProprio.length > 0 || funcionariosSemEntrega.length > 0 || (isAdmin && solicitacoesPendentes > 0))">
+      <RouterLink to="/applayout/solicitacao" class="alert-card alert-info alert-link" v-if="isAdmin && solicitacoesPendentes > 0">
+        <div class="alert-head">
+          <i class="fas fa-paper-plane"></i>
+          <h3>Solicitações pendentes ({{ solicitacoesPendentes }})</h3>
+        </div>
+        <ul class="alert-list">
+          <li><span class="alert-meta">Clique para revisar e aprovar ou rejeitar.</span></li>
+        </ul>
+      </RouterLink>
+
       <RouterLink to="/applayout/estoque" class="alert-card alert-danger alert-link" v-if="estoqueBaixoLista.length > 0">
         <div class="alert-head">
           <i class="fas fa-box-open"></i>
@@ -298,7 +308,7 @@ const abrirApresentacao = () => {
   window.open(`${import.meta.env.BASE_URL}apresentacao-cliente.pdf`, '_blank')
 }
 
-const { supabase } = useSupabase()
+const { supabase, isAdmin } = useSupabase()
 
 const periodoSelecionado = ref('90')
 
@@ -323,6 +333,7 @@ const topEpis = ref([])
 const entregasMensais = ref({ labels: [], datasets: [] })
 const devolucoesRecentes = ref([])
 const devolucoesPorCondicao = ref({ reutilizavel: 0, descarte: 0 })
+const solicitacoesPendentes = ref(0)
 const loading = ref(true)
 
 // EPIs ordenados por saldo (menor primeiro) — para a tabela de estoque
@@ -405,7 +416,8 @@ const carregar = async () => {
     { count: cnt },
     { data: rec },
     { data: vencendo },
-    { data: vencendoProprio }
+    { data: vencendoProprio },
+    { count: csp }
   ] = await Promise.all([
     supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('ativo', true),
     supabase.from('epi').select('*', { count: 'exact', head: true }).eq('ativo', true),
@@ -413,8 +425,10 @@ const carregar = async () => {
     queryEntregas,
     supabase.from('entregas').select('id, data, funcionarios(nome), epi(nome)').order('data', { ascending: false }).limit(5),
     supabase.from('epi').select('id, nome, validade').eq('ativo', true).gte('validade', hoje).lte('validade', dataLimite30).order('validade'),
-    supabase.from('epi').select('id, nome, validade_epi').eq('ativo', true).not('validade_epi', 'is', null).gte('validade_epi', hoje).lte('validade_epi', dataLimite30).order('validade_epi')
+    supabase.from('epi').select('id, nome, validade_epi').eq('ativo', true).not('validade_epi', 'is', null).gte('validade_epi', hoje).lte('validade_epi', dataLimite30).order('validade_epi'),
+    supabase.from('solicitacoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente')
   ])
+  solicitacoesPendentes.value = csp || 0
 
   totalFuncionarios.value = cf || 0
   totalEPIs.value = ce || 0

@@ -42,6 +42,10 @@
           <i class="fas fa-box-open"></i>
           <span>Entregas</span>
         </RouterLink>
+        <RouterLink to="/applayout/solicitacao" class="nav-item" active-class="active">
+          <i class="fas fa-paper-plane"></i>
+          <span>Solicitar EPI</span>
+        </RouterLink>
         <RouterLink to="/applayout/devolucao" class="nav-item" active-class="active">
           <i class="fas fa-undo"></i>
           <span>Devoluções</span>
