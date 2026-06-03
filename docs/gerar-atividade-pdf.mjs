@@ -210,6 +210,7 @@ autoTable(doc, {
     ['RF08', 'O sistema deve gerar relatórios de movimentação por período e exportá-los em PDF.'],
     ['RF09', 'O sistema deve controlar o acesso por login/senha e por perfil (administrador/usuário).'],
     ['RF10', 'O sistema deve permitir a inativação (exclusão lógica) de EPIs e funcionários, preservando o histórico.'],
+    ['RF11', 'O sistema deve permitir que o usuário solicite EPIs para um funcionário (status pendente); o administrador aprova - gerando a entrega com baixa automática de estoque - ou rejeita a solicitação.'],
   ].map((r) => r.map(sane)),
   styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 2, textColor: TEXT, lineColor: [203, 213, 225], lineWidth: 0.1 },
   headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -234,7 +235,7 @@ autoTable(doc, {
 });
 y = doc.lastAutoTable.finalY + 4;
 h3('5.3 Ideação (Brainstorming de Funcionalidades)');
-para('Login com perfis; cadastro de EPIs com validade CA/EPI; cadastro de funcionários e setores; controle de estoque (entrada/saída/baixa); baixa protegida por senha; entrega de múltiplos EPIs com assinatura digital; baixa automática de estoque na entrega; devolução com reposição (reutilizável/descarte); consulta de EPIs em posse por funcionário; alertas de validade e estoque mínimo; dashboard com KPIs e gráficos; rankings de funcionários/EPIs; relatórios com filtros e exportação em PDF; inativação lógica; controle de acesso admin/usuário; PDF comercial com números do sistema.');
+para('Login com perfis; cadastro de EPIs com validade CA/EPI; cadastro de funcionários e setores; controle de estoque (entrada/saída/baixa); baixa protegida por senha; entrega de múltiplos EPIs com assinatura digital; baixa automática de estoque na entrega; devolução com reposição (reutilizável/descarte); solicitação de EPIs com aprovação do administrador (a aprovação gera a entrega e baixa o estoque); consulta de EPIs em posse por funcionário; alertas de validade, estoque mínimo e solicitações pendentes; dashboard com KPIs e gráficos; rankings de funcionários/EPIs; relatórios com filtros e exportação em PDF; inativação lógica; controle de acesso admin/usuário; PDF comercial com números do sistema; diagramas DER/MER acessíveis no dashboard e embutidos no PDF comercial.');
 
 // ===================== ETAPA 3 =====================
 h2('Etapa 3 - Design e Prototipação');
@@ -243,6 +244,7 @@ para('Tela 1 - Login: fundo azul com gradiente, logo e nome "SafeEPI", subtítul
 para('Tela 2 - Cadastro de EPIs: formulário com nome do EPI, nº do CA, validade do CA e opção "tem validade própria?" (mostra campo de data condicional). Abaixo, tabela dos EPIs cadastrados com nome, CA, validades, status (válido/vencido) e ações (editar, inativar). Busca por nome e opção de mostrar inativos.');
 para('Tela 3 - Movimentação (Entrega/Devolução): na entrega, seleciona-se o funcionário e a data, marca-se vários EPIs numa lista (com saldo e status de validade), informa-se a quantidade e confirma-se a assinatura digital; o estoque baixa automaticamente. Na devolução, ao escolher o funcionário aparecem só os EPIs que ele tem em posse; escolhe-se o EPI, a quantidade e a condição (reutilizável -> volta ao estoque; descarte).');
 para('Tela 4 - Consultas e Relatórios: filtros por período, funcionário, EPI e CA; tabela de resultados com validade, quantidade e assinatura; botões de imprimir e exportar PDF. O Dashboard complementa com KPIs (saldo, posse, vencidos), alertas, gráficos (pizza/barras/linha) e rankings.');
+para('Tela 5 - Solicitação de EPIs: o usuário escolhe o funcionário, o EPI e a quantidade e registra uma solicitação (status "pendente"). O administrador vê a lista de solicitações, marca a confirmação de assinatura digital e clica em "Aprovar" - o que gera automaticamente a entrega e baixa o estoque - ou em "Rejeitar". O Dashboard exibe um alerta com a contagem de solicitações pendentes (visível ao administrador).');
 para('[Anexar aqui os protótipos visuais - prints reais das telas do sistema rodando.]', { color: GRAY });
 
 h3('6.2 Diagrama de Casos de Uso (UML)');
@@ -252,7 +254,31 @@ image('diagrama-2-classes.png', 'Classes do domínio e seus relacionamentos.');
 h3('6.4 Diagrama de Sequência (UML) - Registrar Entrega');
 image('diagrama-3-sequencia.png', 'Fluxo de registro de entrega com baixa automática de estoque.');
 h3('6.5 Diagrama Entidade-Relacionamento (BD)');
-image('diagrama-4-er.png', 'Modelo de dados (PostgreSQL/Supabase).');
+image('diagrama-5-der.png', 'Modelo de dados (PostgreSQL/Supabase), já com a entidade solicitacoes.');
+
+h3('6.6 Nova entidade: solicitacoes');
+para('Incluída para o fluxo de solicitação de EPIs (RF11). Relaciona-se com funcionarios (1:N) e com epi (1:N) - é a entidade que registra o pedido antes de virar uma entrega. Versionada em migracoes_05_solicitacoes.sql.');
+autoTable(doc, {
+  startY: y, margin: { left: M, right: M },
+  head: [['Coluna', 'Tipo', 'Descrição']],
+  body: [
+    ['id', 'uuid (PK)', 'Identificador da solicitação.'],
+    ['funcionario_id', 'uuid (FK -> funcionarios)', 'Funcionário para quem o EPI é solicitado.'],
+    ['epi_id', 'uuid (FK -> epi)', 'EPI solicitado.'],
+    ['quantidade', 'integer', 'Quantidade pedida (> 0).'],
+    ['status', 'text', "Estado: 'pendente', 'aprovada' ou 'rejeitada'."],
+    ['solicitante_email', 'text', 'E-mail do usuário que fez o pedido.'],
+    ['observacao', 'text', 'Justificativa opcional.'],
+    ['decidido_por', 'text', 'Admin que aprovou/rejeitou.'],
+    ['decidido_em', 'timestamptz', 'Data/hora da decisão.'],
+    ['created_at', 'timestamptz', 'Data/hora do pedido.'],
+  ].map((r) => r.map(sane)),
+  styles: { font: 'helvetica', fontSize: 9, cellPadding: 1.8, textColor: TEXT, lineColor: [203, 213, 225], lineWidth: 0.1 },
+  headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold' },
+  columnStyles: { 0: { cellWidth: 34, fontStyle: 'bold' }, 1: { cellWidth: 46 } },
+});
+y = doc.lastAutoTable.finalY + 4;
+para('Segurança (RLS): qualquer usuário autenticado pode inserir uma solicitação, sempre com status "pendente"; apenas o administrador (is_admin()) pode atualizar o status (aprovar/rejeitar) ou excluir. Ao aprovar, o sistema cria a entrega (assinatura digital confirmada) e lança a saída no estoque.');
 
 // ===================== VALIDAÇÃO =====================
 h2('7. Validação - Feedback do Usuário');
@@ -263,6 +289,7 @@ bullets([
   'Alertas de validade e estoque no dashboard.',
   'Rastreabilidade de quem está com cada EPI.',
   'Exportação de relatórios em PDF.',
+  'Solicitação de EPIs com aprovação do administrador (fluxo pedido -> aprovação -> entrega).',
 ]);
 para('Pontos de melhoria identificados (sugeridos):', { bold: true, gap: 1 });
 bullets([
@@ -275,12 +302,13 @@ bullets([
 // ===================== ESTRUTURA / LINKS =====================
 h2('11. Estrutura de Pastas do Projeto (VS Code)');
 tree(`EPIS_NEW/
-├── docs/                       # Documentação gerada (PDF/Word/HTML) + diagramas
+├── docs/                       # Documentação + diagramas (DER/MER .html, schema-safeepi.sql)
 ├── public/                     # Arquivos estáticos
 ├── migracoes.sql               # Migrações do banco (Supabase)
 ├── migracoes_02_inativacao.sql
 ├── migracoes_03_devolucao.sql
 ├── migracoes_04_perfis_rls.sql
+├── migracoes_05_solicitacoes.sql
 ├── index.html
 ├── package.json
 ├── vite.config.js
@@ -291,10 +319,10 @@ tree(`EPIS_NEW/
     ├── components/             # applayout.vue, menu.vue, footer.vue
     ├── composables/            # useSupabase.js (cliente + sessão + papel)
     ├── router/                 # index.js (rotas + proteção por perfil)
-    ├── utils/                  # pdfComercial.js
+    ├── utils/                  # pdfComercial.js, diagramaImg.js
     └── views/                  # login, home, dashboard, epi, funcionario,
-                                #  setor, estoque, entrega, devolucao,
-                                #  posse, relatorio`);
+                                #  setor, estoque, entrega, solicitacao,
+                                #  devolucao, posse, relatorio`);
 para('Stack: Vue 3 + Vite (front-end) · Supabase/PostgreSQL (back-end, autenticação e RLS) · Chart.js · jsPDF.', { gap: 3 });
 doc.setFont('helvetica', 'bold').setFontSize(10.5).setTextColor(...TEXT);
 ensure(14);

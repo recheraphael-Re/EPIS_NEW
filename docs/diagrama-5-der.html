@@ -80,12 +80,26 @@ erDiagram
         text role
         timestamptz created_at
     }
+    SOLICITACOES {
+        uuid id PK
+        uuid funcionario_id FK
+        uuid epi_id FK
+        int quantidade
+        text status
+        text solicitante_email
+        text observacao
+        text decidido_por
+        timestamptz decidido_em
+        timestamptz created_at
+    }
 
-    FUNCIONARIOS ||--o{ ENTREGAS   : "recebe"
-    EPI          ||--o{ ENTREGAS   : "e entregue em"
-    FUNCIONARIOS ||--o{ DEVOLUCOES : "devolve"
-    EPI          ||--o{ DEVOLUCOES : "e devolvido em"
-    EPI          ||--o{ ESTOQUE    : "movimenta"
+    FUNCIONARIOS ||--o{ ENTREGAS    : "recebe"
+    EPI          ||--o{ ENTREGAS    : "e entregue em"
+    FUNCIONARIOS ||--o{ DEVOLUCOES  : "devolve"
+    EPI          ||--o{ DEVOLUCOES  : "e devolvido em"
+    EPI          ||--o{ ESTOQUE     : "movimenta"
+    FUNCIONARIOS ||--o{ SOLICITACOES : "solicita p/"
+    EPI          ||--o{ SOLICITACOES : "e solicitado em"
     SETORES      ||..o{ FUNCIONARIOS : "agrupa (logico, por texto)"
 </pre>
 
@@ -96,6 +110,8 @@ erDiagram
   esse vinculo real, troque por uma coluna <code>setor_id uuid</code> referenciando
   <code>setores.id</code>. A tabela <code>perfis</code> referencia <code>auth.users</code>
   (gerenciada pelo Supabase Auth) e cuida do controle de acesso admin/user.
+  A tabela <code>solicitacoes</code> registra o pedido (status pendente); ao ser
+  aprovada pelo admin, gera uma linha em <code>entregas</code> e a baixa em <code>estoque</code>.
 </div>
 
 <script>mermaid.initialize({ startOnLoad: true, securityLevel: 'loose', flowchart: { htmlLabels: false } });</script>

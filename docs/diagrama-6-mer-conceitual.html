@@ -33,6 +33,7 @@ flowchart TB
   R2{devolve}:::rel
   R3{movimenta}:::rel
   R4{pertence}:::rel
+  R5{solicita}:::rel
 
   %% ===== LIGACOES COM CARDINALIDADE (notacao min,max - padrao BRModelo) =====
   %% Le-se: o par (min,max) ao lado de cada entidade indica de quantas
@@ -41,6 +42,8 @@ flowchart TB
   R1 ---|"(0,N)"| EPI
   FUNC ---|"(0,N)"| R2
   R2 ---|"(0,N)"| EPI
+  FUNC ---|"(0,N)"| R5
+  R5 ---|"(0,N)"| EPI
   EPI ---|"(0,N)"| R3
   R3 ---|"(1,1)"| EST
   SETOR -.-|"(0,N)"| R4
@@ -58,6 +61,9 @@ flowchart TB
       <strong>N:N</strong>. Um funcionario recebe varios EPIs e um EPI e entregue a varios funcionarios.
       No DER cada uma vira uma <strong>entidade associativa</strong> (<code>ENTREGAS</code> e
       <code>DEVOLUCOES</code>) com atributos proprios (data, quantidade, etc.).</li>
+    <li><strong>solicita</strong> &mdash; FUNCIONARIO (0,N) &harr; EPI (0,N): relacao
+      <strong>N:N</strong> que vira a entidade associativa <code>SOLICITACOES</code> (status
+      pendente/aprovada/rejeitada). Quando aprovada, gera a entrega.</li>
     <li><strong>movimenta</strong> &mdash; EPI (0,N) &harr; ESTOQUE (1,1): relacao <strong>1:N</strong>.
       Um EPI tem varias movimentacoes; cada movimentacao pertence a exatamente um EPI.</li>
     <li><strong>pertence</strong> &mdash; SETOR (0,N) &harr; FUNCIONARIO (1,1): relacao <strong>1:N</strong>.
