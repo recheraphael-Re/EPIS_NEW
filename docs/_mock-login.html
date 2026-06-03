@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .login-page{min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1a3a6b 100%);display:flex;align-items:center;justify-content:center;gap:5rem;padding:2rem;}
+  .login-brand{text-align:center;color:#fff;}
+  .login-brand i{font-size:4rem;color:#f97316;display:block;margin-bottom:1rem;}
+  .login-brand h1{font-size:3rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.75rem;}
+  .login-brand p{color:#94a3b8;font-size:1rem;line-height:1.6;}
+  .login-card{background:#fff;border-radius:20px;padding:2.5rem;width:100%;max-width:420px;box-shadow:0 25px 60px rgba(0,0,0,0.35);}
+  .card-top{margin-bottom:1.75rem;}
+  .card-top h2{font-size:1.4rem;font-weight:700;color:#0f172a;margin-bottom:0.3rem;}
+  .card-top p{color:#64748b;font-size:0.875rem;}
+  .field{margin-bottom:1.1rem;}
+  .field label{display:block;font-size:0.78rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.4rem;}
+  .input-icon{position:relative;}
+  .input-icon i{position:absolute;left:0.875rem;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:0.875rem;}
+  .input-icon input{width:100%;padding:0.75rem 1rem 0.75rem 2.5rem;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9rem;font-family:inherit;background:#fff;color:#1e293b;}
+  .btn-login{width:100%;padding:0.85rem;background:#f97316;color:#fff;border:none;border-radius:10px;font-size:0.95rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:0.5rem;}
+</style></head>
+<body>
+  <div class="login-page">
+    <div class="login-brand">
+      <i class="fas fa-shield-alt"></i>
+      <h1>SafeEPI</h1>
+      <p>Sistema de Gestão de Equipamentos<br>de Proteção Individual</p>
+    </div>
+    <div class="login-card">
+      <div class="card-top">
+        <h2>Bem-vindo de volta</h2>
+        <p>Entre com suas credenciais para acessar o sistema</p>
+      </div>
+      <form>
+        <div class="field">
+          <label>E-mail</label>
+          <div class="input-icon"><i class="fas fa-envelope"></i>
+            <input type="email" value="seu@email.com" style="color:#94a3b8"></div>
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <div class="input-icon"><i class="fas fa-lock"></i>
+            <input type="text" value="********" style="color:#94a3b8"></div>
+        </div>
+        <button type="button" class="btn-login"><i class="fas fa-sign-in-alt"></i> Acessar Sistema</button>
+      </form>
+    </div>
+  </div>
+</body></html>

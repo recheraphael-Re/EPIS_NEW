@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;background:#f1f5f9;color:#1e293b;}
+  .shell{display:flex;min-height:100vh;}
+  /* sidebar */
+  .sidebar{width:240px;background:#0f172a;color:#fff;display:flex;flex-direction:column;padding-bottom:1.5rem;flex-shrink:0;}
+  .brand{display:flex;align-items:center;gap:10px;padding:1.4rem 1.25rem;font-size:1.15rem;font-weight:700;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:.5rem;}
+  .brand i{color:#f97316;font-size:1.25rem;}
+  .nav{display:flex;flex-direction:column;gap:2px;padding:0 .75rem;flex:1;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:.6rem 1rem;color:#94a3b8;text-decoration:none;border-radius:8px;font-size:.84rem;font-weight:500;}
+  .nav-item i{width:18px;text-align:center;font-size:.9rem;}
+  .nav-item.active{background:rgba(249,115,22,.13);color:#fb923c;font-weight:600;}
+  .nav-item.active i{color:#fb923c;}
+  .btn-sair{margin:.5rem .75rem 0;display:flex;align-items:center;gap:10px;padding:.6rem 1rem;background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:.84rem;font-weight:500;}
+  /* content */
+  .content{flex:1;padding:2rem;overflow:hidden;}
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;flex-wrap:wrap;gap:1rem;}
+  .page-header h1{font-size:1.5rem;font-weight:700;color:#0f172a;letter-spacing:-.025em;}
+  .page-header p{color:#64748b;margin-top:.2rem;font-size:.875rem;}
+  .header-actions{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+  .btn-pdf{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,#f97316,#c2570b);color:#fff;padding:.55rem 1.1rem;border-radius:8px;font-size:.85rem;font-weight:600;border:none;}
+  .btn-diagrama{display:inline-flex;align-items:center;gap:.5rem;background:#fff;color:#1e40af;padding:.55rem 1.1rem;border-radius:8px;font-size:.85rem;font-weight:600;border:1px solid #bfdbfe;}
+  .periodo{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:#475569;}
+  .periodo select{padding:.5rem .7rem;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;background:#fff;}
+  /* alerts */
+  .alerts{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1.5rem;}
+  .alert-card{border-radius:12px;padding:1rem 1.25rem;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid;}
+  .alert-info{border-color:#3b82f6;}
+  .alert-danger{border-color:#ef4444;}
+  .alert-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+  .alert-head h3{font-size:.9rem;font-weight:700;color:#0f172a;}
+  .alert-info .alert-head i{color:#3b82f6;}
+  .alert-danger .alert-head i{color:#ef4444;}
+  .alert-meta{font-size:.8rem;color:#64748b;}
+  .alert-card li{list-style:none;font-size:.83rem;color:#334155;margin-top:.2rem;}
+  .alert-card li strong{font-weight:600;}
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+  .stat{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.9rem;border-left:4px solid;}
+  .stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;}
+  .stat-val{font-size:1.5rem;font-weight:700;color:#0f172a;line-height:1;}
+  .stat-label{font-size:.78rem;color:#64748b;margin-top:.25rem;}
+  .chev{margin-left:auto;color:#cbd5e1;}
+  /* charts */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;}
+  .card-header{padding:1rem 1.5rem;border-bottom:1px solid #f1f5f9;}
+  .card-header h2{font-size:.9rem;font-weight:600;color:#0f172a;display:flex;align-items:center;gap:.5rem;}
+  .card-header h2 i{color:#f97316;}
+  .chart-box{padding:1.5rem;display:flex;align-items:center;justify-content:center;height:230px;}
+  /* donut */
+  .donut{width:170px;height:170px;border-radius:50%;background:conic-gradient(#10b981 0 62%,#f59e0b 62% 82%,#ef4444 82% 100%);display:flex;align-items:center;justify-content:center;}
+  .donut::after{content:"";width:95px;height:95px;background:#fff;border-radius:50%;}
+  .legend{margin-left:1.5rem;font-size:.8rem;color:#475569;}
+  .legend div{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+  .dot{width:11px;height:11px;border-radius:3px;}
+  /* bars */
+  .bars{display:flex;align-items:flex-end;gap:1.1rem;height:180px;width:100%;justify-content:center;padding:0 1rem;}
+  .bar{width:38px;background:#f97316;border-radius:6px 6px 0 0;position:relative;}
+  .bar span{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:.72rem;color:#64748b;}
+</style></head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><i class="fas fa-shield-alt"></i><span>SafeEPI</span></div>
+    <nav class="nav">
+      <a class="nav-item"><i class="fas fa-hard-hat"></i><span>Cadastro EPI</span></a>
+      <a class="nav-item"><i class="fas fa-users"></i><span>Funcionários</span></a>
+      <a class="nav-item"><i class="fas fa-sitemap"></i><span>Setores</span></a>
+      <a class="nav-item"><i class="fas fa-boxes"></i><span>Estoque</span></a>
+      <a class="nav-item"><i class="fas fa-box-open"></i><span>Entregas</span></a>
+      <a class="nav-item"><i class="fas fa-paper-plane"></i><span>Solicitar EPI</span></a>
+      <a class="nav-item"><i class="fas fa-undo"></i><span>Devoluções</span></a>
+      <a class="nav-item"><i class="fas fa-people-carry"></i><span>EPIs em Posse</span></a>
+      <a class="nav-item active"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
+      <a class="nav-item"><i class="fas fa-file-alt"></i><span>Relatórios</span></a>
+      <a class="nav-item"><i class="fas fa-file-pdf"></i><span>PDF Comercial</span></a>
+    </nav>
+    <button class="btn-sair"><i class="fas fa-sign-out-alt"></i><span>Sair</span></button>
+  </aside>
+
+  <main class="content">
+    <div class="page-header">
+      <div><h1>Dashboard</h1><p>Visão geral do sistema de gestão de EPIs</p></div>
+      <div class="header-actions">
+        <button class="btn-pdf"><i class="fas fa-file-pdf"></i> PDF Comercial</button>
+        <button class="btn-diagrama"><i class="fas fa-project-diagram"></i> DER</button>
+        <button class="btn-diagrama"><i class="fas fa-sitemap"></i> MER</button>
+        <button class="btn-diagrama"><i class="fas fa-file-powerpoint"></i> Apresentação</button>
+        <span class="periodo">Período:
+          <select><option>Últimos 90 dias</option></select></span>
+      </div>
+    </div>
+
+    <div class="alerts">
+      <div class="alert-card alert-info">
+        <div class="alert-head"><i class="fas fa-paper-plane"></i><h3>Solicitações pendentes (2)</h3></div>
+        <ul><li><span class="alert-meta">Clique para revisar e aprovar ou rejeitar.</span></li></ul>
+      </div>
+      <div class="alert-card alert-danger">
+        <div class="alert-head"><i class="fas fa-box-open"></i><h3>Estoque baixo ou zerado (3)</h3></div>
+        <ul>
+          <li><strong>Luva nitrílica</strong> <span class="alert-meta">2 un. restantes</span></li>
+          <li><strong>Protetor auricular</strong> <span class="alert-meta">esgotado</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat" style="border-color:#3b82f6"><div class="stat-icon" style="background:#eff6ff;color:#3b82f6"><i class="fas fa-warehouse"></i></div><div><div class="stat-val">128</div><div class="stat-label">Saldo em Estoque (un.)</div></div><i class="fas fa-chevron-right chev"></i></div>
+      <div class="stat" style="border-color:#8b5cf6"><div class="stat-icon" style="background:#f5f3ff;color:#8b5cf6"><i class="fas fa-people-carry"></i></div><div><div class="stat-val">42</div><div class="stat-label">EPIs em Posse (un.)</div></div><i class="fas fa-chevron-right chev"></i></div>
+      <div class="stat" style="border-color:#f59e0b"><div class="stat-icon" style="background:#fffbeb;color:#f59e0b"><i class="fas fa-box-open"></i></div><div><div class="stat-val">3</div><div class="stat-label">Estoque Baixo/Zerado</div></div><i class="fas fa-chevron-right chev"></i></div>
+      <div class="stat" style="border-color:#ef4444"><div class="stat-icon" style="background:#fef2f2;color:#ef4444"><i class="fas fa-exclamation-triangle"></i></div><div><div class="stat-val">1</div><div class="stat-label">EPIs Vencidos</div></div><i class="fas fa-chevron-right chev"></i></div>
+      <div class="stat" style="border-color:#22c55e"><div class="stat-icon" style="background:#f0fdf4;color:#22c55e"><i class="fas fa-users"></i></div><div><div class="stat-val">15</div><div class="stat-label">Funcionários</div></div><i class="fas fa-chevron-right chev"></i></div>
+      <div class="stat" style="border-color:#f97316"><div class="stat-icon" style="background:#fff7ed;color:#f97316"><i class="fas fa-box"></i></div><div><div class="stat-val">37</div><div class="stat-label">Entregas (período)</div></div><i class="fas fa-chevron-right chev"></i></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-chart-pie"></i> Saúde do Inventário</h2></div>
+        <div class="chart-box">
+          <div class="donut"></div>
+          <div class="legend">
+            <div><span class="dot" style="background:#10b981"></span> Estoque OK</div>
+            <div><span class="dot" style="background:#f59e0b"></span> Estoque Baixo</div>
+            <div><span class="dot" style="background:#ef4444"></span> Esgotado</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-chart-bar"></i> Entregas por mês</h2></div>
+        <div class="chart-box">
+          <div class="bars">
+            <div class="bar" style="height:55%"><span>Fev</span></div>
+            <div class="bar" style="height:72%"><span>Mar</span></div>
+            <div class="bar" style="height:48%"><span>Abr</span></div>
+            <div class="bar" style="height:88%"><span>Mai</span></div>
+            <div class="bar" style="height:64%"><span>Jun</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body></html>
